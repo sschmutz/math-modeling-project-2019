@@ -1,0 +1,112 @@
+---
+title: "Modeling transition/transversion bias of nucleotide substitution over time"
+description: "Case study 4"
+author:
+  - name: Stefan Schmutz 
+    url: https://example.com/norajones
+    affiliation: ZHAW
+date: "`r Sys.Date()`"
+output:
+  distill::distill_article:
+    toc: true
+    toc_depth: 2
+knit: pagedown::chrome_print
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(tidyverse)
+library(seqinr)
+library(knitr)
+library(kableExtra)
+```
+
+```{r read-fasta, echo=FALSE}
+mt_cyb <-
+  read.fasta(file = "mt-cyb-human-mouse_cDNAalignment.fasta")
+```
+
+
+# Estimating nucleotide frequencies
+
+> Estimate nucleotide frequencies from the pairwise alignment of human and mouse cytochrome b gene as given in the file “mt-cyb-human- mouse_cDNAalignment.fasta”. Use these values to parameterize the model.
+
+One way to estimate the nucleotide frequencies is to count them.  
+Since we're working with a pairwise alignment without indels, the total length
+of both sequences is the same (`r length(mt_cyb$HOMOSAPIENSCYTB)` nt). 
+The detailed composition is listed in Table \@ref(tab:nucleotide-frequencies).
+
+
+```{r nucleotide-frequencies, echo=FALSE}
+
+nt_T_human <- 0
+nt_C_human <- 0
+nt_A_human <- 0
+nt_G_human <- 0
+
+for (nt in mt_cyb$HOMOSAPIENSCYTB){
+  if (nt == "t"){
+    nt_T_human = nt_T_human + 1
+  }
+  
+  if (nt == "c"){
+  nt_C_human = nt_C_human + 1
+  }
+  
+  if (nt == "a"){
+  nt_A_human = nt_A_human + 1
+  }
+  
+  if (nt == "g"){
+  nt_G_human = nt_G_human + 1
+  }
+}
+
+
+nt_T_mouse <- 0
+nt_C_mouse <- 0
+nt_A_mouse <- 0
+nt_G_mouse <- 0
+
+for (nt in mt_cyb$MUSMUSCULUSCYTB){
+  if (nt == "t"){
+    nt_T_mouse = nt_T_mouse + 1
+  }
+  
+  if (nt == "c"){
+  nt_C_mouse = nt_C_mouse + 1
+  }
+  
+  if (nt == "a"){
+  nt_A_mouse = nt_A_mouse + 1
+  }
+  
+  if (nt == "g"){
+  nt_G_mouse = nt_G_mouse + 1
+  }
+}
+
+nt_frequencies <-
+  tribble(
+    ~nucleotide, ~organism, ~count,
+    "T", "human", nt_T_human,
+    "T", "mouse", nt_T_mouse,
+    "C", "human", nt_C_human,
+    "C", "mouse", nt_C_mouse,
+    "A", "human", nt_A_human,
+    "A", "mouse", nt_A_mouse,
+    "G", "human", nt_G_human,
+    "G", "mouse", nt_G_mouse
+  )
+
+nt_frequencies %>%
+  pivot_wider(names_from = "organism", values_from = "count") %>%
+  kable(caption = "Nucleotide frequencies") %>%
+  kable_styling(full_width = F)
+
+```
+
+
+
