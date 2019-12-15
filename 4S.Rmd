@@ -26,6 +26,9 @@ library(kableExtra)
 ```{r read-fasta, echo=FALSE}
 mt_cyb <-
   read.fasta(file = "mt-cyb-human-mouse_cDNAalignment.fasta")
+
+mt_cyb_df <-
+  bind_cols("human" = mt_cyb$HOMOSAPIENSCYTB, "mouse" = mt_cyb$MUSMUSCULUSCYTB)
 ```
 
 
@@ -41,52 +44,15 @@ The detailed composition is listed in Table \@ref(tab:nucleotide-frequencies).
 
 ```{r nucleotide-frequencies, echo=FALSE}
 
-nt_T_human <- 0
-nt_C_human <- 0
-nt_A_human <- 0
-nt_G_human <- 0
+nt_T_human <- sum(mt_cyb$HOMOSAPIENSCYTB == "t")
+nt_C_human <- sum(mt_cyb$HOMOSAPIENSCYTB == "c")
+nt_A_human <- sum(mt_cyb$HOMOSAPIENSCYTB == "a")
+nt_G_human <- sum(mt_cyb$HOMOSAPIENSCYTB == "g")
 
-for (nt in mt_cyb$HOMOSAPIENSCYTB){
-  if (nt == "t"){
-    nt_T_human = nt_T_human + 1
-  }
-  
-  if (nt == "c"){
-  nt_C_human = nt_C_human + 1
-  }
-  
-  if (nt == "a"){
-  nt_A_human = nt_A_human + 1
-  }
-  
-  if (nt == "g"){
-  nt_G_human = nt_G_human + 1
-  }
-}
-
-
-nt_T_mouse <- 0
-nt_C_mouse <- 0
-nt_A_mouse <- 0
-nt_G_mouse <- 0
-
-for (nt in mt_cyb$MUSMUSCULUSCYTB){
-  if (nt == "t"){
-    nt_T_mouse = nt_T_mouse + 1
-  }
-  
-  if (nt == "c"){
-  nt_C_mouse = nt_C_mouse + 1
-  }
-  
-  if (nt == "a"){
-  nt_A_mouse = nt_A_mouse + 1
-  }
-  
-  if (nt == "g"){
-  nt_G_mouse = nt_G_mouse + 1
-  }
-}
+nt_T_mouse <- sum(mt_cyb$MUSMUSCULUSCYTB == "t")
+nt_C_mouse <- sum(mt_cyb$MUSMUSCULUSCYTB == "c")
+nt_A_mouse <- sum(mt_cyb$MUSMUSCULUSCYTB == "a")
+nt_G_mouse <- sum(mt_cyb$MUSMUSCULUSCYTB == "g")
 
 nt_frequencies <-
   tribble(
@@ -108,5 +74,19 @@ nt_frequencies %>%
 
 ```
 
+# Estimating transition transversion rate ratio
 
+> Propose a simple way of estimating transition transversion rate ratio from the dataset and use this estimate for the parameterization of the model.
+
+```{r sequence-comparison, echo=FALSE}
+
+mt_cyb_df %>%
+  mutate("human-mouse" = paste0(human, "-", mouse)) %>%
+  group_by(`human-mouse`) %>%
+  summarize(n = n()) %>%
+  kable(caption = "Nucleotide comparisons") %>%
+  kable_styling(full_width = F)
+
+
+```
 
