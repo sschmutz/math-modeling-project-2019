@@ -3,15 +3,15 @@ title: "Modeling transition/transversion bias of nucleotide substitution over ti
 description: "Case study 4"
 author:
   - name: Stefan Schmutz 
-    url: https://example.com/norajones
     affiliation: ZHAW
 date: "`r Sys.Date()`"
 output:
   distill::distill_article:
     toc: true
     toc_depth: 2
-knit: pagedown::chrome_print
-
+#knit: pagedown::chrome_print
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -24,19 +24,24 @@ library(kableExtra)
 ```
 
 ```{r read-fasta, echo=FALSE}
+nt_order <- c("T", "C", "A", "G")
+
 mt_cyb <-
-  read.fasta(file = "mt-cyb-human-mouse_cDNAalignment.fasta")
+  read.fasta(file = "mt-cyb-human-mouse_cDNAalignment.fasta", set.attributes = FALSE)
 
 mt_cyb_df <-
-  bind_cols("human" = mt_cyb$HOMOSAPIENSCYTB, "mouse" = mt_cyb$MUSMUSCULUSCYTB)
+  bind_cols("mouse" = mt_cyb$MUSMUSCULUSCYTB, "human" = mt_cyb$HOMOSAPIENSCYTB) %>%
+  mutate(mouse = fct_relevel(toupper(mouse), nt_order),
+         human = fct_relevel(toupper(human), nt_order))
 ```
 
-
-# Estimating nucleotide frequencies
+# Estimations to parameterize the model
+## Nucleotide frequencies
 
 > Estimate nucleotide frequencies from the pairwise alignment of human and mouse cytochrome b gene as given in the file “mt-cyb-human- mouse_cDNAalignment.fasta”. Use these values to parameterize the model.
 
-One way to estimate the nucleotide frequencies is to count them.  
+One way to estimate the nucleotide frequencies is to count the occurences and
+divide them by the total length.  
 Since we're working with a pairwise alignment without indels, the total length
 of both sequences is the same (`r length(mt_cyb$HOMOSAPIENSCYTB)` nt). 
 The detailed composition is listed in Table \@ref(tab:nucleotide-frequencies).
@@ -44,49 +49,98 @@ The detailed composition is listed in Table \@ref(tab:nucleotide-frequencies).
 
 ```{r nucleotide-frequencies, echo=FALSE}
 
-nt_T_human <- sum(mt_cyb$HOMOSAPIENSCYTB == "t")
-nt_C_human <- sum(mt_cyb$HOMOSAPIENSCYTB == "c")
-nt_A_human <- sum(mt_cyb$HOMOSAPIENSCYTB == "a")
-nt_G_human <- sum(mt_cyb$HOMOSAPIENSCYTB == "g")
-
-nt_T_mouse <- sum(mt_cyb$MUSMUSCULUSCYTB == "t")
-nt_C_mouse <- sum(mt_cyb$MUSMUSCULUSCYTB == "c")
-nt_A_mouse <- sum(mt_cyb$MUSMUSCULUSCYTB == "a")
-nt_G_mouse <- sum(mt_cyb$MUSMUSCULUSCYTB == "g")
-
 nt_frequencies <-
-  tribble(
-    ~nucleotide, ~organism, ~count,
-    "T", "human", nt_T_human,
-    "T", "mouse", nt_T_mouse,
-    "C", "human", nt_C_human,
-    "C", "mouse", nt_C_mouse,
-    "A", "human", nt_A_human,
-    "A", "mouse", nt_A_mouse,
-    "G", "human", nt_G_human,
-    "G", "mouse", nt_G_mouse
-  )
+  mt_cyb_df %>%
+  pivot_longer(c(mouse, human), names_to = "organism", values_to = "nucleotide") %>%
+  group_by(organism, nucleotide) %>%
+  summarize(count = n(),
+            frequency = round(count / length(mt_cyb$HOMOSAPIENSCYTB), digits = 4))
 
 nt_frequencies %>%
-  pivot_wider(names_from = "organism", values_from = "count") %>%
+  pivot_wider(-count, names_from = "organism", values_from = "frequency") %>%
   kable(caption = "Nucleotide frequencies") %>%
   kable_styling(full_width = F)
 
 ```
 
-# Estimating transition transversion rate ratio
+## Transition transversion rate ratio
 
 > Propose a simple way of estimating transition transversion rate ratio from the dataset and use this estimate for the parameterization of the model.
 
-```{r sequence-comparison, echo=FALSE}
+The numbers of the 16 possible combinations of the sequence
+alignment are shown in Table \@ref(tab:nucleotide-comparisons) (from mouse in rows to human in columns).
 
-mt_cyb_df %>%
-  mutate("human-mouse" = paste0(human, "-", mouse)) %>%
-  group_by(`human-mouse`) %>%
-  summarize(n = n()) %>%
-  kable(caption = "Nucleotide comparisons") %>%
+```{r nucleotide-comparisons, echo=FALSE}
+
+nt_comparisons <-
+  mt_cyb_df %>%
+  group_by(mouse, human) %>%
+  summarize(count = n())
+
+nt_comparisons_matrix <-
+  matrix(nt_comparisons$count, nrow = 4, byrow = TRUE, dimnames = list(nt_order, nt_order))
+
+nt_comparisons_matrix %>%
+  kable(caption = "Nucleotide comparisons (numbers)") %>%
   kable_styling(full_width = F)
-
-
 ```
 
+We get the frequencies (Table \@ref(tab:nucleotide-comparisons-frequencies)) when the numbers are divided by the total length (`r length(mt_cyb$HOMOSAPIENSCYTB)` nt).
+
+```{r nucleotide-comparisons-frequencies, echo=FALSE}
+
+round(nt_comparisons_matrix / length(mt_cyb$HOMOSAPIENSCYTB), digits = 4) %>%
+  kable(caption = "Nucleotide comparisons (frequencies)") %>%
+  kable_styling(full_width = F)
+```
+
+```{r rate-ratios, echo=FALSE}
+
+transition_rate <-
+  nt_comparisons %>%
+  filter(mouse == "T" & human == "C" |
+         mouse == "C" & human == "T" |
+         mouse == "A" & human == "G" |
+         mouse == "G" & human == "A") %>%
+  pull(count) %>%
+  sum() / length(mt_cyb$HOMOSAPIENSCYTB)
+  
+transversion_rate <-
+  nt_comparisons %>%
+  filter(mouse == "T" & human == "A" |
+         mouse == "A" & human == "T" |
+         mouse == "T" & human == "G" |
+         mouse == "G" & human == "T" |
+         mouse == "C" & human == "A" |
+         mouse == "A" & human == "C" |
+         mouse == "C" & human == "G" |
+         mouse == "G" & human == "C") %>%
+  pull(count) %>%
+  sum() / length(mt_cyb$HOMOSAPIENSCYTB)
+```
+
+Substitution rates for transitions ($\alpha = `r round(transition_rate, digits = 4)`$)
+and transversions ($\beta = `r round(transversion_rate, digits = 4)`$) can be estimated.
+Total substitution rates for any nucleotide can now be calculated ($\alpha + 2\beta = `r round(transition_rate + 2*transversion_rate, digits = 4)`$).
+
+$$\mathbf{Q} = \left[\begin{array}
+{c}
+-(\alpha + 2\beta) & \alpha & \beta & \beta \\
+\alpha & -(\alpha + 2\beta) & \beta & \beta \\
+\beta & \beta & -(\alpha + 2\beta) & \alpha \\
+\beta & \beta & \alpha & -(\alpha + 2\beta)
+\end{array}\right]
+$$
+
+# (log-)likelihood
+## Computing by hand
+
+> By hand, compute the (log-)likelihood for the first 10 alignment positions given that the two sequences are separated by evolutionary distance of 0.01 expected substitutions per site.
+
+## Computing using a program
+
+> Write a program to compute the likelihood function of the whole alignment for the same genetic distance. Compute the likelihood for the whole alignment for several values of transition-transversion ratio around the value you estimated. Can you find a value that gives a better likelihood?
+
+# Implementing a simulation
+
+> Implement a simulation under your model for two sequences over an arbitrary distance t. Validate the program by simulation and show the results of you validation.

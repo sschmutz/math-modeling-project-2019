@@ -44,7 +44,7 @@
   <!--radix_placeholder_rmarkdown_metadata-->
   
   <script type="text/json" id="radix-rmarkdown-metadata">
-  {"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["title","description","author","date","output","knit"]}},"value":[{"type":"character","attributes":{},"value":["Modeling transition/transversion bias of nucleotide substitution over time"]},{"type":"character","attributes":{},"value":["Case study 4"]},{"type":"list","attributes":{},"value":[{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","url","affiliation"]}},"value":[{"type":"character","attributes":{},"value":["Stefan Schmutz"]},{"type":"character","attributes":{},"value":["https://example.com/norajones"]},{"type":"character","attributes":{},"value":["ZHAW"]}]}]},{"type":"character","attributes":{},"value":["2019-12-15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["distill::distill_article"]}},"value":[{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["toc","toc_depth"]}},"value":[{"type":"logical","attributes":{},"value":[true]},{"type":"integer","attributes":{},"value":[2]}]}]},{"type":"character","attributes":{},"value":["pagedown::chrome_print"]}]}
+  {"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["title","description","author","date","output","editor_options"]}},"value":[{"type":"character","attributes":{},"value":["Modeling transition/transversion bias of nucleotide substitution over time"]},{"type":"character","attributes":{},"value":["Case study 4"]},{"type":"list","attributes":{},"value":[{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["name","affiliation"]}},"value":[{"type":"character","attributes":{},"value":["Stefan Schmutz"]},{"type":"character","attributes":{},"value":["ZHAW"]}]}]},{"type":"character","attributes":{},"value":["2019-12-15"]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["distill::distill_article"]}},"value":[{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["toc","toc_depth"]}},"value":[{"type":"logical","attributes":{},"value":[true]},{"type":"integer","attributes":{},"value":[2]}]}]},{"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["chunk_output_type"]}},"value":[{"type":"character","attributes":{},"value":["console"]}]}]}
   </script>
   <!--/radix_placeholder_rmarkdown_metadata-->
   
@@ -1941,7 +1941,7 @@ distill-header .nav a {
 <!--radix_placeholder_front_matter-->
 
 <script id="distill-front-matter" type="text/json">
-{"title":"Modeling transition/transversion bias of nucleotide substitution over time","description":"Case study 4","authors":[{"author":"Stefan Schmutz","authorURL":"https://example.com/norajones","affiliation":"ZHAW","affiliationURL":"#"}],"publishedDate":"2019-12-15T00:00:00.000+01:00","citationText":"Schmutz, 2019"}
+{"title":"Modeling transition/transversion bias of nucleotide substitution over time","description":"Case study 4","authors":[{"author":"Stefan Schmutz","authorURL":"#","affiliation":"ZHAW","affiliationURL":"#"}],"publishedDate":"2019-12-15T00:00:00.000+01:00","citationText":"Schmutz, 2019"}
 </script>
 
 <!--/radix_placeholder_front_matter-->
@@ -1956,7 +1956,7 @@ distill-header .nav a {
 </div>
 
 <div class="d-byline">
-  Stefan Schmutz <a href="https://example.com/norajones" class="uri">https://example.com/norajones</a> (ZHAW)
+  Stefan Schmutz  (ZHAW)
   
 <br />2019-12-15
 </div>
@@ -1965,19 +1965,27 @@ distill-header .nav a {
 <h3 class="d-toc-header">Table of Contents</h3>
 <nav class="d-toc" id="TOC">
 <ul>
-<li><a href="#estimating-nucleotide-frequencies">Estimating nucleotide frequencies</a></li>
-<li><a href="#estimating-transition-transversion-rate-ratio">Estimating transition transversion rate ratio</a></li>
+<li><a href="#estimations-to-parameterize-the-model">Estimations to parameterize the model</a><ul>
+<li><a href="#nucleotide-frequencies">Nucleotide frequencies</a></li>
+<li><a href="#transition-transversion-rate-ratio">Transition transversion rate ratio</a></li>
+</ul></li>
+<li><a href="#log-likelihood">(log-)likelihood</a><ul>
+<li><a href="#computing-by-hand">Computing by hand</a></li>
+<li><a href="#computing-using-a-program">Computing using a program</a></li>
+</ul></li>
+<li><a href="#implementing-a-simulation">Implementing a simulation</a></li>
 </ul>
 </nav>
 <hr class="d-toc-separator" />
 <div class="layout-chunk" data-layout="l-body">
 
 </div>
-<h1 id="estimating-nucleotide-frequencies">Estimating nucleotide frequencies</h1>
+<h1 id="estimations-to-parameterize-the-model">Estimations to parameterize the model</h1>
+<h2 id="nucleotide-frequencies">Nucleotide frequencies</h2>
 <blockquote>
 <p>Estimate nucleotide frequencies from the pairwise alignment of human and mouse cytochrome b gene as given in the file “mt-cyb-human- mouse_cDNAalignment.fasta”. Use these values to parameterize the model.</p>
 </blockquote>
-<p>One way to estimate the nucleotide frequencies is to count them.<br />
+<p>One way to estimate the nucleotide frequencies is to count the occurences and divide them by the total length.<br />
 Since we’re working with a pairwise alignment without indels, the total length of both sequences is the same (1140 nt). The detailed composition is listed in Table <a href="#tab:nucleotide-frequencies">1</a>.</p>
 <div class="layout-chunk" data-layout="l-body">
 <table class="table" style="width: auto !important; margin-left: auto; margin-right: auto;">
@@ -2003,10 +2011,10 @@ mouse
 T
 </td>
 <td style="text-align:right;">
-286
+0.2509
 </td>
 <td style="text-align:right;">
-327
+0.2868
 </td>
 </tr>
 <tr>
@@ -2014,10 +2022,10 @@ T
 C
 </td>
 <td style="text-align:right;">
-391
+0.3430
 </td>
 <td style="text-align:right;">
-312
+0.2737
 </td>
 </tr>
 <tr>
@@ -2025,10 +2033,10 @@ C
 A
 </td>
 <td style="text-align:right;">
-326
+0.2860
 </td>
 <td style="text-align:right;">
-361
+0.3167
 </td>
 </tr>
 <tr>
@@ -2036,110 +2044,73 @@ A
 G
 </td>
 <td style="text-align:right;">
-137
+0.1202
 </td>
 <td style="text-align:right;">
-140
+0.1228
 </td>
 </tr>
 </tbody>
 </table>
 </div>
-<h1 id="estimating-transition-transversion-rate-ratio">Estimating transition transversion rate ratio</h1>
+<h2 id="transition-transversion-rate-ratio">Transition transversion rate ratio</h2>
 <blockquote>
 <p>Propose a simple way of estimating transition transversion rate ratio from the dataset and use this estimate for the parameterization of the model.</p>
 </blockquote>
+<p>The numbers of the 16 possible combinations of the sequence alignment are shown in Table <a href="#tab:nucleotide-comparisons">2</a> (from mouse in rows to human in columns).</p>
 <div class="layout-chunk" data-layout="l-body">
 <table class="table" style="width: auto !important; margin-left: auto; margin-right: auto;">
 <caption>
-<span id="tab:sequence-comparison">Table 2: </span>Nucleotide comparisons
+<span id="tab:nucleotide-comparisons">Table 2: </span>Nucleotide comparisons (numbers)
 </caption>
 <thead>
 <tr>
 <th style="text-align:left;">
-human-mouse
 </th>
 <th style="text-align:right;">
-n
+T
+</th>
+<th style="text-align:right;">
+C
+</th>
+<th style="text-align:right;">
+A
+</th>
+<th style="text-align:right;">
+G
 </th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td style="text-align:left;">
-a-a
+T
 </td>
 <td style="text-align:right;">
-264
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-a-c
-</td>
-<td style="text-align:right;">
-27
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-a-g
-</td>
-<td style="text-align:right;">
-15
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-a-t
-</td>
-<td style="text-align:right;">
-20
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-c-a
-</td>
-<td style="text-align:right;">
-59
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-c-c
-</td>
-<td style="text-align:right;">
-249
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-c-g
-</td>
-<td style="text-align:right;">
-11
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-c-t
+232
 </td>
 <td style="text-align:right;">
 72
 </td>
-</tr>
-<tr>
-<td style="text-align:left;">
-g-a
+<td style="text-align:right;">
+20
 </td>
 <td style="text-align:right;">
-19
+3
 </td>
 </tr>
 <tr>
 <td style="text-align:left;">
-g-c
+C
+</td>
+<td style="text-align:right;">
+32
+</td>
+<td style="text-align:right;">
+249
+</td>
+<td style="text-align:right;">
+27
 </td>
 <td style="text-align:right;">
 4
@@ -2147,23 +2118,16 @@ g-c
 </tr>
 <tr>
 <td style="text-align:left;">
-g-g
+A
 </td>
 <td style="text-align:right;">
-111
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-g-t
+19
 </td>
 <td style="text-align:right;">
-3
+59
 </td>
-</tr>
-<tr>
-<td style="text-align:left;">
-t-a
+<td style="text-align:right;">
+264
 </td>
 <td style="text-align:right;">
 19
@@ -2171,31 +2135,145 @@ t-a
 </tr>
 <tr>
 <td style="text-align:left;">
-t-c
-</td>
-<td style="text-align:right;">
-32
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-t-g
+G
 </td>
 <td style="text-align:right;">
 3
 </td>
-</tr>
-<tr>
-<td style="text-align:left;">
-t-t
+<td style="text-align:right;">
+11
 </td>
 <td style="text-align:right;">
-232
+15
+</td>
+<td style="text-align:right;">
+111
 </td>
 </tr>
 </tbody>
 </table>
 </div>
+<p>We get the frequencies (Table <a href="#tab:nucleotide-comparisons-frequencies">3</a>) when the numbers are divided by the total length (1140 nt).</p>
+<div class="layout-chunk" data-layout="l-body">
+<table class="table" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<caption>
+<span id="tab:nucleotide-comparisons-frequencies">Table 3: </span>Nucleotide comparisons (frequencies)
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:right;">
+T
+</th>
+<th style="text-align:right;">
+C
+</th>
+<th style="text-align:right;">
+A
+</th>
+<th style="text-align:right;">
+G
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+T
+</td>
+<td style="text-align:right;">
+0.2035
+</td>
+<td style="text-align:right;">
+0.0632
+</td>
+<td style="text-align:right;">
+0.0175
+</td>
+<td style="text-align:right;">
+0.0026
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+C
+</td>
+<td style="text-align:right;">
+0.0281
+</td>
+<td style="text-align:right;">
+0.2184
+</td>
+<td style="text-align:right;">
+0.0237
+</td>
+<td style="text-align:right;">
+0.0035
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+A
+</td>
+<td style="text-align:right;">
+0.0167
+</td>
+<td style="text-align:right;">
+0.0518
+</td>
+<td style="text-align:right;">
+0.2316
+</td>
+<td style="text-align:right;">
+0.0167
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+G
+</td>
+<td style="text-align:right;">
+0.0026
+</td>
+<td style="text-align:right;">
+0.0096
+</td>
+<td style="text-align:right;">
+0.0132
+</td>
+<td style="text-align:right;">
+0.0974
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="layout-chunk" data-layout="l-body">
+
+</div>
+<p>Substitution rates for transitions (<span class="math inline">\(\alpha = 0.1211\)</span>) and transversions (<span class="math inline">\(\beta = 0.1281\)</span>) can be estimated. Total substitution rates for any nucleotide can now be calculated (<span class="math inline">\(\alpha + 2\beta = 0.3772\)</span>).</p>
+<p><span class="math display">\[\mathbf{Q} = \left[\begin{array}
+{c}
+-(\alpha + 2\beta) &amp; \alpha &amp; \beta &amp; \beta \\
+\alpha &amp; -(\alpha + 2\beta) &amp; \beta &amp; \beta \\
+\beta &amp; \beta &amp; -(\alpha + 2\beta) &amp; \alpha \\
+\beta &amp; \beta &amp; \alpha &amp; -(\alpha + 2\beta)
+\end{array}\right]
+\]</span></p>
+<h1 id="log-likelihood">(log-)likelihood</h1>
+<h2 id="computing-by-hand">Computing by hand</h2>
+<blockquote>
+<p>By hand, compute the (log-)likelihood for the first 10 alignment positions given that the two sequences are separated by evolutionary distance of 0.01 expected substitutions per site.</p>
+</blockquote>
+<h2 id="computing-using-a-program">Computing using a program</h2>
+<blockquote>
+<p>Write a program to compute the likelihood function of the whole alignment for the same genetic distance. Compute the likelihood for the whole alignment for several values of transition-transversion ratio around the value you estimated. Can you find a value that gives a better likelihood?</p>
+</blockquote>
+<h1 id="implementing-a-simulation">Implementing a simulation</h1>
+<blockquote>
+<p>Implement a simulation under your model for two sequences over an arbitrary distance t. Validate the program by simulation and show the results of you validation.</p>
+</blockquote>
 <!--radix_placeholder_article_footer-->
 <!--/radix_placeholder_article_footer-->
 </div>
@@ -2203,6 +2281,15 @@ t-t
 <div class="d-appendix">
 </div>
 
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
 
 <!--radix_placeholder_site_after_body-->
 <!--/radix_placeholder_site_after_body-->
