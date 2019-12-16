@@ -1,17 +1,8 @@
 ---
 title: "Modeling transition/transversion bias of nucleotide substitution over time"
 description: "Case study 4"
-author:
-  - name: Stefan Schmutz 
-    affiliation: ZHAW
-date: "`r Sys.Date()`"
-output:
-  distill::distill_article:
-    toc: true
-    toc_depth: 2
-#knit: pagedown::chrome_print
-editor_options: 
-  chunk_output_type: console
+bibliography: bibliography.bib
+output: distill::distill_article
 ---
 
 ```{r setup, include=FALSE}
@@ -35,8 +26,28 @@ mt_cyb_df <-
          human = fct_relevel(toupper(human), nt_order))
 ```
 
-# Estimations to parameterize the model
-## Nucleotide frequencies
+## Introduction
+DNA, the molecule essential for known life, consists of four building blocks. 
+Those blocks (thymine (T), cytosine (C), adenine (A), guanine (G)) are called nucleotides. [@wiki:DNA]  
+Since DNA evolves over time, substitutions (change of nucleotides) occur. 
+For structural reasons, transitions (substitutions between A and G or T and C), 
+are more likely to happen compared to transversions (all other substitutions)
+in the majority of the cases [@10.1371/journal.pgen.0030022].
+
+The aim of this work is to generate a Markov model of a nucleotide sequence which 
+consideres different substitution rates for transitions and transversions.  
+The four nucleotides of DNA represent the four different states of the Markov model.  
+Other parameters needed for the model are the initial state distribution and 
+state transition probabilities. Those parameters will be estimated in the next section 
+and are based on a pairwise sequence alignment of human and mouse cytochrome b (MT-CYB) 
+which is a mitochondrial gene [@doi:10.1056/NEJM199909303411404].
+
+
+This model then allows us to calculate the probability of a given sequence.
+**?not sure if this is the goal, specify the correct goal?**
+
+## Estimations to parameterize the model
+### Nucleotide frequencies
 
 > Estimate nucleotide frequencies from the pairwise alignment of human and mouse cytochrome b gene as given in the file “mt-cyb-human- mouse_cDNAalignment.fasta”. Use these values to parameterize the model.
 
@@ -44,7 +55,8 @@ One way to estimate the nucleotide frequencies is to count the occurences and
 divide them by the total length.  
 Since we're working with a pairwise alignment without indels, the total length
 of both sequences is the same (`r length(mt_cyb$HOMOSAPIENSCYTB)` nt). 
-The detailed composition is listed in Table \@ref(tab:nucleotide-frequencies).
+The detailed composition is listed in Table \@ref(tab:nucleotide-frequencies).  
+**?These are the initial state distribution probabilities or equilibrium distribution \pi?**
 
 
 ```{r nucleotide-frequencies, echo=FALSE}
@@ -63,7 +75,7 @@ nt_frequencies %>%
 
 ```
 
-## Transition transversion rate ratio
+### Transition transversion rate ratio
 
 > Propose a simple way of estimating transition transversion rate ratio from the dataset and use this estimate for the parameterization of the model.
 
@@ -124,7 +136,7 @@ and transversions ($\beta = `r round(transversion_rate, digits = 4)`$) can be es
 Total substitution rates for any nucleotide can now be calculated ($\alpha + 2\beta = `r round(transition_rate + 2*transversion_rate, digits = 4)`$).
 
 $$\mathbf{Q} = \left[\begin{array}
-{c}
+{cccc}
 -(\alpha + 2\beta) & \alpha & \beta & \beta \\
 \alpha & -(\alpha + 2\beta) & \beta & \beta \\
 \beta & \beta & -(\alpha + 2\beta) & \alpha \\
@@ -132,15 +144,15 @@ $$\mathbf{Q} = \left[\begin{array}
 \end{array}\right]
 $$
 
-# (log-)likelihood
-## Computing by hand
+## (log-)likelihood
+### Computing by hand
 
 > By hand, compute the (log-)likelihood for the first 10 alignment positions given that the two sequences are separated by evolutionary distance of 0.01 expected substitutions per site.
 
-## Computing using a program
+### Computing using a program
 
 > Write a program to compute the likelihood function of the whole alignment for the same genetic distance. Compute the likelihood for the whole alignment for several values of transition-transversion ratio around the value you estimated. Can you find a value that gives a better likelihood?
 
-# Implementing a simulation
+## Implementing a simulation
 
 > Implement a simulation under your model for two sequences over an arbitrary distance t. Validate the program by simulation and show the results of you validation.
