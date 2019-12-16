@@ -108,7 +108,7 @@ round(nt_comparisons_matrix / length(mt_cyb$HOMOSAPIENSCYTB), digits = 4) %>%
 
 ```{r rate-ratios, echo=FALSE}
 
-transition_rate <-
+transition_difference <-
   nt_comparisons %>%
   filter(mouse == "T" & human == "C" |
          mouse == "C" & human == "T" |
@@ -117,7 +117,7 @@ transition_rate <-
   pull(count) %>%
   sum() / length(mt_cyb$HOMOSAPIENSCYTB)
   
-transversion_rate <-
+transversion_difference <-
   nt_comparisons %>%
   filter(mouse == "T" & human == "A" |
          mouse == "A" & human == "T" |
@@ -131,18 +131,13 @@ transversion_rate <-
   sum() / length(mt_cyb$HOMOSAPIENSCYTB)
 ```
 
-Substitution rates for transitions ($\alpha = `r round(transition_rate, digits = 4)`$)
-and transversions ($\beta = `r round(transversion_rate, digits = 4)`$) can be estimated.
-Total substitution rates for any nucleotide can now be calculated ($\alpha + 2\beta = `r round(transition_rate + 2*transversion_rate, digits = 4)`$).
+The fraction of sites with transitional differences ($S = `r round(transition_difference, digits = 4)`$)
+and transversional differences ($V = `r round(transversion_difference, digits = 4)`$) can be estimated
+by taking the sum of the corresponding fields from Table \@ref(tab:nucleotide-comparisons-frequencies).  
+The estimate of distance ($\hat{d}$) and transition/transversion rate ratio ($\hat{\kappa}$) can now be calculated as follows:  
+$$\hat{d} = $$
 
-$$\mathbf{Q} = \left[\begin{array}
-{cccc}
--(\alpha + 2\beta) & \alpha & \beta & \beta \\
-\alpha & -(\alpha + 2\beta) & \beta & \beta \\
-\beta & \beta & -(\alpha + 2\beta) & \alpha \\
-\beta & \beta & \alpha & -(\alpha + 2\beta)
-\end{array}\right]
-$$
+
 
 ## (log-)likelihood
 ### Computing by hand
