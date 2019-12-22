@@ -145,13 +145,35 @@ transversion_difference <-
          mouse == "G" & human == "C") %>%
   pull(count) %>%
   sum() / length(mt_cyb$HOMOSAPIENSCYTB)
+
+d_hat <- -1/2*log(1-2*transition_difference-transversion_difference)-1/4*log(1-2*transversion_difference)
+kappa_hat <- 2*log(1-2*transition_difference-transversion_difference)/log(1-2*transversion_difference)-1
+
 ```
 
 The fraction of sites with transitional differences ($S = `r round(transition_difference, digits = 4)`$)
 and transversional differences ($V = `r round(transversion_difference, digits = 4)`$) can be estimated
 by taking the sum of the corresponding fields from Table \ref{tab:nucleotide-comparisons-frequencies}.  
+The proportion of different sites ($\hat{p} = S+V = `r round(transition_difference+transversion_difference, digits = 4)`$) 
+usually underestimates the amount of substitutions which occured.  
+To get a better estimate, we can apply the distance formulae for the K80 model 
+which consideres different transitions- transversion-rates [@doi:10.1093/acprof:oso/9780199602605.001.0001].  
+The substitution rate matrix ($Q$) of the K80 model is
+
+$$
+Q=
+\begin{bmatrix}
+. & \alpha & \beta & \beta\\
+\alpha & . & \beta & \beta \\
+\beta & \beta & . & \alpha \\
+\beta & \beta & \alpha & .
+\end{bmatrix}.
+$$
+
 The estimate of distance ($\hat{d}$) and transition/transversion rate ratio ($\hat{\kappa}$) can now be calculated as follows:  
-$$\hat{d} = $$
+$$\hat{d} = -\frac{1}{2}ln(1-2S-V)-\frac{1}{4}ln(1-2V) = `r round(d_hat, digits = 4)`$$
+$$\hat{\kappa} = \frac{2ln(1-2S-V)}{ln(1-2V)}-1 = `r round(kappa_hat, digits = 4)`$$
+
 
 
 
@@ -159,6 +181,23 @@ $$\hat{d} = $$
 ### Computing by hand
 
 > By hand, compute the (log-)likelihood for the first 10 alignment positions given that the two sequences are separated by evolutionary distance of 0.01 expected substitutions per site.
+
+To compute the likelihood ($L$) and log-likelihood ($\ell$) we're given that the distance of the two sequences 
+from human and mouse is $\hat{d} = 0.01$. This means that the predicted actual 
+mutations between the two sequences is 0.01 per position.  
+**?how do we use that information?**
+
+The likelihood at a position is defined as the sum of the probabilities of all 
+possible ancestral nucleotides. For this pairwise alignment we assume one internal 
+node (one common ancestor) which gives us 4 possibilities.  
+
+For this example, likelihood is defined as the product of the likelihoods  
+of each of the 10 positions:  
+$$L = \prod_{j = 1}^{N} L_{(j)}$$
+
+To avoid underflow (computer issue caused by very small numbers) log-likelihood 
+is often used:  
+$$\ell = \sum_{j = 1}^{N} ln(L_{(j)})$$
 
 ### Computing using a program
 
