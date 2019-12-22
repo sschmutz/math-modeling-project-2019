@@ -1963,10 +1963,9 @@ distill-header .nav a {
 <h2 id="introduction">Introduction</h2>
 <p>DNA, the molecule essential for known life, consists of four building blocks. Those blocks (thymine (T), cytosine (C), adenine (A), guanine (G)) are called nucleotides. <span class="citation" data-cites="wiki:DNA">(Wikipedia contributors <a href="#ref-wiki:DNA">2019</a>)</span><br />
 Since DNA evolves over time, substitutions (change of nucleotides) occur. For structural reasons, transitions (substitutions between A and G or T and C), are more likely to happen compared to transversions (all other substitutions) in the majority of the cases <span class="citation" data-cites="10.1371/journal.pgen.0030022">(Keller <a href="#ref-10.1371/journal.pgen.0030022">2007</a>)</span>.</p>
-<p>The aim of this work is to generate a Markov model of a nucleotide sequence which consideres different substitution rates for transitions and transversions.<br />
+<p>The aim of this work is to describe a Markov model of nucleotide substitution over time which consideres different substitution rates for transitions and transversions and different nucleotide frequencies.<br />
 The four nucleotides of DNA represent the four different states of the Markov model.<br />
-Other parameters needed for the model are the initial state distribution and state transition probabilities. Those parameters will be estimated in the next section and are based on a pairwise sequence alignment of human and mouse cytochrome b (MT-CYB) which is a mitochondrial gene <span class="citation" data-cites="doi:10.1056/NEJM199909303411404">(Andreu et al. <a href="#ref-doi:10.1056/NEJM199909303411404">1999</a>)</span>.</p>
-<p>This model then allows us to calculate the probability of a given sequence. <strong>?not sure if this is the goal, specify the correct goal?</strong></p>
+Other parameters needed for the model are the initial state distribution (<span class="math inline">\(\pi\)</span>) and state transition probabilities. Those parameters will be estimated in the next section and are based on a pairwise sequence alignment of human and mouse cytochrome b (MT-CYB) which is a mitochondrial gene <span class="citation" data-cites="doi:10.1056/NEJM199909303411404">(Andreu et al. <a href="#ref-doi:10.1056/NEJM199909303411404">1999</a>)</span>.</p>
 <h2 id="estimations-to-parameterize-the-model">Estimations to parameterize the model</h2>
 <h3 id="nucleotide-frequencies">Nucleotide frequencies</h3>
 <blockquote>
@@ -1974,7 +1973,7 @@ Other parameters needed for the model are the initial state distribution and sta
 </blockquote>
 <p>One way to estimate the nucleotide frequencies is to count the occurences and divide them by the total length.<br />
 Since we’re working with a pairwise alignment without indels, the total length of both sequences is the same (1140 nt). The detailed composition is listed in Table <a href="#tab:nucleotide-frequencies">1</a>.<br />
-<strong>?These are the initial state distribution probabilities or equilibrium distribution ?</strong></p>
+<strong>?These are the initial state distribution probabilities or equilibrium distribution <span class="math inline">\(\pi\)</span>?</strong></p>
 <div class="layout-chunk" data-layout="l-body">
 <table class="table" style="width: auto !important; margin-left: auto; margin-right: auto;">
 <caption>
@@ -2041,6 +2040,8 @@ G
 </tbody>
 </table>
 </div>
+<p>We assume that the mean of this distribution is the equilibrium distribution <span class="math inline">\(\pi\)</span>.</p>
+<p><span class="math display">\[\pi = (\pi_{T}, \pi_{C}, \pi_{A}, \pi_{G}) = (0.2689, 0.3084, 0.3014, 0.1215)\]</span></p>
 <h3 id="transition-transversion-rate-ratio">Transition transversion rate ratio</h3>
 <blockquote>
 <p>Propose a simple way of estimating transition transversion rate ratio from the dataset and use this estimate for the parameterization of the model.</p>

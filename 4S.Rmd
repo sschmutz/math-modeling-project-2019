@@ -34,17 +34,15 @@ For structural reasons, transitions (substitutions between A and G or T and C),
 are more likely to happen compared to transversions (all other substitutions)
 in the majority of the cases [@10.1371/journal.pgen.0030022].
 
-The aim of this work is to generate a Markov model of a nucleotide sequence which 
-consideres different substitution rates for transitions and transversions.  
+The aim of this work is to describe a Markov model of nucleotide substitution over time which 
+consideres different substitution rates for transitions and transversions and
+different nucleotide frequencies.  
 The four nucleotides of DNA represent the four different states of the Markov model.  
-Other parameters needed for the model are the initial state distribution and 
+Other parameters needed for the model are the initial state distribution ($\pi$) and 
 state transition probabilities. Those parameters will be estimated in the next section 
 and are based on a pairwise sequence alignment of human and mouse cytochrome b (MT-CYB) 
 which is a mitochondrial gene [@doi:10.1056/NEJM199909303411404].
 
-
-This model then allows us to calculate the probability of a given sequence.
-**?not sure if this is the goal, specify the correct goal?**
 
 ## Estimations to parameterize the model
 ### Nucleotide frequencies
@@ -56,7 +54,7 @@ divide them by the total length.
 Since we're working with a pairwise alignment without indels, the total length
 of both sequences is the same (`r length(mt_cyb$HOMOSAPIENSCYTB)` nt). 
 The detailed composition is listed in Table \@ref(tab:nucleotide-frequencies).  
-**?These are the initial state distribution probabilities or equilibrium distribution \pi?**
+**?These are the initial state distribution probabilities or equilibrium distribution $\pi$?**
 
 
 ```{r nucleotide-frequencies, echo=FALSE}
@@ -73,7 +71,17 @@ nt_frequencies %>%
   kable(caption = "Nucleotide frequencies") %>%
   kable_styling(full_width = F)
 
+avg_frequencies <-
+  nt_frequencies %>%
+  group_by(nucleotide) %>%
+  summarise(avg_frequency = mean(frequency)) %>%
+  pull(avg_frequency)
+
 ```
+
+We assume that the mean of this distribution is the equilibrium distribution $\pi$.  
+
+$$\pi = (\pi_{T}, \pi_{C}, \pi_{A}, \pi_{G}) = (`r round(avg_frequencies, digits = 4)`)$$
 
 ### Transition transversion rate ratio
 
