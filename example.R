@@ -70,7 +70,7 @@ distance_JC69 <- -3/4*log(1-4/3*substitution_rate)
 
 # variance calculation is currently wrong
 var_distance_JC69 <- substitution_rate*(1-substitution_rate)/total_length*(1/(1-4*substitution_rate/3)**2)
-
+sd_distance_JC69 <- sqrt(var_distance_JC69)
 
 
 # K80 ---------------------------------------------------------------------
@@ -98,4 +98,14 @@ transversion_rate <-
   sum() / total_length
 
 distance_K80 <- -1/2*log(1-2*transition_rate-transversion_rate)-1/4*log(1-2*transversion_rate)
-kappa <- transition_rate/transversion_rate
+kappa_K80 <- 2*log(1-2*transition_rate-transversion_rate)/log(1-2*transversion_rate)-1
+
+a <- (1-2*transition_rate-transversion_rate)**-1
+b <- 1/2*(((1-2*transition_rate-transversion_rate)**-1)+(1-2*transversion_rate)**-1)
+var_distance_K80 <- (a**2*transition_rate+b**2*transversion_rate-(a*transition_rate+b*transversion_rate)**2)/total_length
+sd_distance_K80 <- sqrt(var_distance_K80)
+
+
+# HKY85 -------------------------------------------------------------------
+
+
