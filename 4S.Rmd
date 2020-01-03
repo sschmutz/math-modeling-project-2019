@@ -174,13 +174,10 @@ kappa_hat <- 2*log(1-2*transition_difference-transversion_difference)/log(1-2*tr
 The fraction of sites with transitional differences ($S = `r round(transition_difference, digits = 4)`$)
 and transversional differences ($V = `r round(transversion_difference, digits = 4)`$) can be estimated
 by taking the sum of the corresponding fields from Table \ref{tab:nucleotide-comparisons-frequencies}.  
-The proportion of different sites ($\hat{p} = S+V = `r round(transition_difference+transversion_difference, digits = 4)`$) 
-usually underestimates the amount of substitutions which occured.  
-To get a better estimate, we can apply the distance formulae for the K80 model 
-which consideres different transitions- transversion-rates [@doi:10.1093/acprof:oso/9780199602605.001.0001].  
-
-The estimate of transition/transversion rate ratio ($\hat{\kappa}$) can now be calculated as follows:  
-$$\hat{\kappa} = \frac{2ln(1-2S-V)}{ln(1-2V)}-1 = `r round(kappa_hat, digits = 4)`$$
+There are different definitions of the transition transversion rate ratio. [@doi:10.1093/acprof:oso/9780199602605.001.0001]
+It was decided to apply the measure used by Kimura [@Kimura1980] and Hasegawa et al. [@Hasegawa1985] ($\kappa=\alpha/\beta$).
+The estimate of transition transversion rate ratio ($\hat{\kappa}$) can be calculated as follows:  
+$$\hat{\kappa} = \frac{2ln(1-2S-V)}{ln(1-2V)}-1 = `r round(kappa_hat, digits = 4)`$$ [@doi:10.1093/acprof:oso/9780199602605.001.0001]
 
 
 ## (log-)likelihood
