@@ -176,8 +176,8 @@ and transversional differences ($V = `r round(transversion_difference, digits = 
 by taking the sum of the corresponding fields from Table \ref{tab:nucleotide-comparisons-frequencies}.  
 There are different definitions of the transition transversion rate ratio. [@doi:10.1093/acprof:oso/9780199602605.001.0001]
 It was decided to apply the measure used by Kimura [@Kimura1980] and Hasegawa et al. [@Hasegawa1985] ($\kappa=\alpha/\beta$).
-The estimate of transition transversion rate ratio ($\hat{\kappa}$) can be calculated as follows:  
-$$\hat{\kappa} = \frac{2ln(1-2S-V)}{ln(1-2V)}-1 = `r round(kappa_hat, digits = 4)`$$ [@doi:10.1093/acprof:oso/9780199602605.001.0001]
+The estimate of transition transversion rate ratio ($\kappa$) can be calculated as follows:  
+$$\kappa = \frac{2ln(1-2S-V)}{ln(1-2V)}-1 = `r round(kappa_hat, digits = 4)`$$ [@doi:10.1093/acprof:oso/9780199602605.001.0001]
 
 
 ## (log-)likelihood
@@ -186,13 +186,18 @@ $$\hat{\kappa} = \frac{2ln(1-2S-V)}{ln(1-2V)}-1 = `r round(kappa_hat, digits = 4
 > By hand, compute the (log-)likelihood for the first 10 alignment positions given that the two sequences are separated by evolutionary distance of 0.01 expected substitutions per site.
 
 To compute the likelihood ($L$) and log-likelihood ($\ell$) we're given that the distance of the two sequences 
-from human and mouse is $\hat{d} = 0.01$. This means that the predicted actual 
+from human and mouse is $d = 0.01$. This means that the predicted actual 
 mutations between the two sequences is 0.01 per position.  
-**?how do we use that information?**
+We assume that the mouse sequence is ancestral to the human sequence.  
+Using the following formulae [@wiki:Models_of_DNA_evolution], the the transition probabilities can be calculated:
 
-The likelihood at a position is defined as the sum of the probabilities of all 
-possible ancestral nucleotides. For this pairwise alignment we assume one internal 
-node (one common ancestor) which gives us 4 possibilities.  
+$$
+\lambda = \frac{1}{2(\pi_{A}+\pi_{G})(\pi_{C}+\pi_{T})+2\kappa(\pi_{A}\pi_{G}+\pi_{C}\pi_{T})}
+$$
+
+$$
+P_{AA}(d,\kappa,\pi) = \frac{\pi_{A}(\pi_{A}+\pi_{G}+(\pi_{C}+\pi_{T})e^{-\lambda d})+\pi_{G}e^{-(1+(\pi_{A}+\pi_{G})(\kappa-1))\lambda d}}{\pi_{A}+\pi_{G}}
+$$
 
 For this example, likelihood is defined as the product of the likelihoods  
 of each of the 10 positions:  
@@ -209,5 +214,9 @@ $$\ell = \sum_{j = 1}^{N} ln(L_{(j)})$$
 ## Implementing a simulation
 
 > Implement a simulation under your model for two sequences over an arbitrary distance t. Validate the program by simulation and show the results of you validation.
+
+## Discussion
+
+It's unclear if the (requested) applied model is a good choice for this example. The transition transversion bias of the given sequence alignment is not very strong. Furthermore more complex models usually require more data to infer the parameter and are more prone to overfitting.
 
 ## References
