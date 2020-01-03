@@ -1,7 +1,19 @@
 library(tidyverse)
+library(seqinr)
+
 
 nt_order <- c("T", "C", "A", "G")
-total_length <- 948
+
+example <-
+  read.fasta(file = "example-human-orang.fasta", set.attributes = FALSE)
+
+total_length <- length(example$Human)
+
+example_df <-
+  bind_cols("Orang" = example$Orang, "Human" = example$Human) %>%
+  mutate(Orang = fct_relevel(toupper(Orang), nt_order),
+         Human = fct_relevel(toupper(Human), nt_order))
+
 
 nt_frequencies_example <-
   tribble(
@@ -105,7 +117,62 @@ b <- 1/2*(((1-2*transition_rate-transversion_rate)**-1)+(1-2*transversion_rate)*
 var_distance_K80 <- (a**2*transition_rate+b**2*transversion_rate-(a*transition_rate+b*transversion_rate)**2)/total_length
 sd_distance_K80 <- sqrt(var_distance_K80)
 
+p0_K80 <- 1/4+1/4*exp((-4*distance_K80)/(kappa_K80+2))+1/2*exp((-2*distance_K80*(kappa_K80+1))/(kappa_K80+2))
+p1_K80 <- 1/4+1/4*exp((-4*distance_K80)/(kappa_K80+2))-1/2*exp((-2*distance_K80*(kappa_K80+1))/(kappa_K80+2))
+p2_K80 <- 1/4-1/4*exp((-4*distance_K80)/(kappa_K80+2))
 
-# HKY85 -------------------------------------------------------------------
+p0_K80 + p1_K80 + 2*p2_K80 == 1
 
+# JC69-ML -----------------------------------------------------------------
 
+# distance (distance_JC69) with ML method the same as JC69 above
+
+x <-
+  nt_comparisons_example %>%
+  filter(!Orang == "T" & Human == "T" |
+           !Orang == "C" & Human == "C" |
+           !Orang == "A" & Human == "A" |
+           !Orang == "G" & Human == "G") %>%
+  pull(count) %>%
+  sum()
+
+l_JC69 <- x * log(x/(12*total_length)) + (total_length-x) * log((total_length-x)/(4*total_length))
+
+log_l <-
+  function(distance){
+    x <- 90
+    total_length <- 948
+    l <- x * log(1/16-1/16*exp(-4*distance/3))+(total_length-x)*log(1/16+3/16*exp(-4*distance/3))
+    return(l)
+  }
+
+optimize(log_l, interval = c(0.05, 0.2), maximum = TRUE)
+
+ggplot(data.frame(distance = c(0.05, 0.2)), aes(distance)) +
+  stat_function(fun = log_l)
+
+# K80-ML ------------------------------------------------------------------
+
+n_s <-
+  nt_comparisons_example %>%
+  filter(Orang == "T" & Human == "C" |
+           Orang == "C" & Human == "T" |
+           Orang == "A" & Human == "G" |
+           Orang == "G" & Human == "A") %>%
+  pull(count) %>%
+  sum()
+
+n_v <-
+  nt_comparisons_example %>%
+  filter(Orang == "T" & Human == "A" |
+           Orang == "A" & Human == "T" |
+           Orang == "T" & Human == "G" |
+           Orang == "G" & Human == "T" |
+           Orang == "C" & Human == "A" |
+           Orang == "A" & Human == "C" |
+           Orang == "C" & Human == "G" |
+           Orang == "G" & Human == "C") %>%
+  pull(count) %>%
+  sum()
+
+l_K80 <- (total_length-n_s-n_v)*log(p0_K80/4)+n_s*log(p1_K80/4)+n_v*log(p2_K80/4)
