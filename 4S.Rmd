@@ -48,21 +48,18 @@ state transition probabilities. Those parameters will be estimated in the next s
 and are based on a pairwise sequence alignment of human and mouse cytochrome b (MT-CYB) 
 which is a mitochondrial gene [@doi:10.1056/NEJM199909303411404].
 
-**?initial state distribution = steady-state distribution?**
-
 ## Estimations to parameterize the model
+There are several different Markov models of nucleotide substitution described in the literature [@doi:10.1093/acprof:oso/9780199602605.001.0001]. The HKY85 model [@Hasegawa1985] was chosen because it fits the problem at hand.
+
 ### Nucleotide frequencies
 
-> Estimate nucleotide frequencies from the pairwise alignment of human and mouse cytochrome b gene as given in the file “mt-cyb-human- mouse_cDNAalignment.fasta”. Use these values to parameterize the model.
+> Estimate nucleotide frequencies from the pairwise alignment of human and mouse cytochrome b gene as given in the file “mt-cyb-human-mouse_cDNAalignment.fasta”. Use these values to parameterize the model.
 
 A way to estimate the nucleotide frequencies is to count the occurences and
 divide them by the total length.  
 Since we're working with a pairwise alignment without indels, the total length
 of both sequences is the same (`r length(mt_cyb$HOMOSAPIENSCYTB)` nt). 
 The detailed composition is listed in Table \ref{tab:nucleotide-frequencies}.  
-
-**?These are the initial state distribution probabilities $\pi_{i}$ or equilibrium distribution $\pi$?**  
-**?what's the difference between $\pi$ and $\hat{\pi}$**
 
 
 ```{r nucleotide-frequencies, echo=FALSE}
@@ -206,3 +203,5 @@ $$\ell = \sum_{j = 1}^{N} ln(L_{(j)})$$
 ## Implementing a simulation
 
 > Implement a simulation under your model for two sequences over an arbitrary distance t. Validate the program by simulation and show the results of you validation.
+
+## References
