@@ -167,7 +167,6 @@ transversion_difference <-
   pull(count) %>%
   sum() / length(mt_cyb$HOMOSAPIENSCYTB)
 
-d_hat <- -1/2*log(1-2*transition_difference-transversion_difference)-1/4*log(1-2*transversion_difference)
 kappa_hat <- 2*log(1-2*transition_difference-transversion_difference)/log(1-2*transversion_difference)-1
 
 ```
@@ -179,23 +178,9 @@ The proportion of different sites ($\hat{p} = S+V = `r round(transition_differen
 usually underestimates the amount of substitutions which occured.  
 To get a better estimate, we can apply the distance formulae for the K80 model 
 which consideres different transitions- transversion-rates [@doi:10.1093/acprof:oso/9780199602605.001.0001].  
-The substitution rate matrix ($Q$) of the K80 model is
 
-$$
-Q=
-\begin{bmatrix}
-. & \alpha & \beta & \beta\\
-\alpha & . & \beta & \beta \\
-\beta & \beta & . & \alpha \\
-\beta & \beta & \alpha & .
-\end{bmatrix}.
-$$
-
-The estimate of distance ($\hat{d}$) and transition/transversion rate ratio ($\hat{\kappa}$) can now be calculated as follows:  
-$$\hat{d} = -\frac{1}{2}ln(1-2S-V)-\frac{1}{4}ln(1-2V) = `r round(d_hat, digits = 4)`$$
+The estimate of transition/transversion rate ratio ($\hat{\kappa}$) can now be calculated as follows:  
 $$\hat{\kappa} = \frac{2ln(1-2S-V)}{ln(1-2V)}-1 = `r round(kappa_hat, digits = 4)`$$
-
-
 
 
 ## (log-)likelihood
