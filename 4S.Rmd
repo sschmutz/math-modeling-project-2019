@@ -43,13 +43,37 @@ in the majority of the cases [@10.1371/journal.pgen.0030022].
 The aim of this work is to describe a Markov model of nucleotide substitution 
 over time which consideres nucleotide- and transition/transversion-bias.  
 The four nucleotides of DNA represent the four different states of the Markov model.  
-Other parameters needed for the model are the initial state distribution ($\pi$) and 
+Other parameters needed for the model are the steady-state distribution ($\pi$) and 
 state transition probabilities. Those parameters will be estimated in the next section 
 and are based on a pairwise sequence alignment of human and mouse cytochrome b (MT-CYB) 
 which is a mitochondrial gene [@doi:10.1056/NEJM199909303411404].
 
 ## Estimations to parameterize the model
-There are several different Markov models of nucleotide substitution described in the literature [@doi:10.1093/acprof:oso/9780199602605.001.0001]. The HKY85 model [@Hasegawa1985] was chosen because it fits the problem at hand.
+There are several different Markov models of nucleotide substitution described in the literature [@doi:10.1093/acprof:oso/9780199602605.001.0001]. The HKY85 model [@Hasegawa1985] was chosen because it fits the problem at hand. The substitution rate matrix $Q$ is defined as follows:  
+
+$$
+Q=
+\begin{bmatrix}
+. & \alpha \pi_{C} & \beta \pi_{A} & \beta \pi_{G}\\
+\alpha \pi_{T} & . & \beta \pi_{A} & \beta \pi_{G} \\
+\beta \pi_{T} & \beta \pi_{C} & . & \alpha \pi_{G} \\
+\beta \pi_{T} & \beta \pi_{C} & \alpha \pi_{A} & .
+\end{bmatrix}.
+$$
+
+$\alpha$ (transition-rate) and $\beta$ (transversion rate) can be summarised as the transition/transversion rate ratio $\kappa=\alpha/\beta$. The substitution rate matrix can therefore also be described as follows:
+
+$$
+Q=
+\begin{bmatrix}
+. & \kappa \pi_{C} & \pi_{A} & \pi_{G}\\
+\kappa \pi_{T} & . & \pi_{A} & \pi_{G} \\
+\pi_{T} & \pi_{C} & . & \kappa \pi_{G} \\
+\pi_{T} & \pi_{C} & \kappa \pi_{A} & .
+\end{bmatrix}.
+$$
+
+The diagonal of $Q$ is defined by the requirement, that each row of a substitution rate matrix must sum to 0.
 
 ### Nucleotide frequencies
 
@@ -84,7 +108,7 @@ avg_frequencies <-
 
 ```
 
-We assume that the mean of this distribution is the equilibrium distribution $\pi$.  
+We assume that the mean of this distribution is the steady-state distribution $\pi$.  
 
 $$\pi = (\pi_{T}, \pi_{C}, \pi_{A}, \pi_{G}) = (`r round(avg_frequencies, digits = 4)`)$$
 
