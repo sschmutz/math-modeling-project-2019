@@ -293,6 +293,83 @@ $$\ell = \sum_{j = 1}^{N} \ln(Pr_{(j)}) = `r formatC(l, digits = 3, format = "f"
 
 > Write a program to compute the likelihood function of the whole alignment for the same genetic distance. Compute the likelihood for the whole alignment for several values of transition-transversion ratio around the value you estimated. Can you find a value that gives a better likelihood?
 
+```{r likelihood-function, echo=FALSE}
+
+log_likelihood <- function(v, kappa, pi, df){
+  
+  # get nucleotide steady-state frequencies from the vector provided
+  # order is important (T, C, A, G)
+  pi_T <- pi[1]
+  pi_C <- pi[2]
+  pi_A <- pi[3]
+  pi_G <- pi[4]
+
+  # compute the rate matrix without considering mu first
+  rate_matrix <-
+    frame_matrix(
+      ~T, ~C, ~A, ~G,
+      0-kappa*pi_C-pi_A-pi_G, kappa*pi_C, pi_A, pi_G,
+      kappa*pi_T, 0-kappa*pi_T-pi_A-pi_G, pi_A, pi_G,
+      pi_T, pi_C, 0-pi_T-pi_C-kappa*pi_G, kappa*pi_G,
+      pi_T, pi_C, kappa*pi_A, 0-pi_T-pi_C-kappa*pi_A
+    )
+  
+  # calculate mu and update the rate matrix
+  mu <- -1/(pi_T*rate_matrix[[1,1]] + pi_C*rate_matrix[[2,2]] + pi_A*rate_matrix[[3,3]] + pi_G*rate_matrix[[4,4]])
+  rate_matrix <- rate_matrix*mu
+  
+  # use described formula and matrix exponentiation to compute the transition matrix
+  transition_matrix <- expm(rate_matrix*v)
+  
+  # reformat transition matrix so it can be used in the next step
+  transition_matrix_df <-
+    as_tibble(transition_matrix) %>%
+    bind_cols(mouse = nt_order) %>%
+    pivot_longer(cols = c(T, C, A, G), names_to = "human", values_to = "transition_probability")
+  
+  mt_cyb_df_prob <-
+    mt_cyb_df %>%
+    mutate(mouse = as.character(mouse),
+           human = as.character(human)) %>%
+    full_join(transition_matrix_df, by = c("mouse", "human")) %>%
+    mutate(pi =
+             case_when(
+               mouse == "T" ~ pi_T,
+               mouse == "C" ~ pi_C,
+               mouse == "A" ~ pi_A,
+               mouse == "G" ~ pi_G)
+           ) %>%
+    mutate(prob = pi * transition_probability,
+           prob_log = log(prob))
+  
+  return(sum(mt_cyb_df_prob$prob_log))
+  
+}
+
+log_likelihood_total <- log_likelihood(0.01, kappa_hat, avg_frequencies, mt_cyb_df)
+```
+
+The function `log_likelihood` was written, which takes following arguments:  
+- `v`: evolutionary distance (expected substitutions per site)  
+- `kappa`: transition transversion rate ratio  
+- `pi`: vector of steady-state distribution of nucleotides (T, C, A, G)  
+- `df`: dataframe with alignment (organism in columns, sites in rows)  
+
+
+and returns the log-likelihood of the sequence alignment which in this case is:
+$$\ell = `r formatC(log_likelihood_total, digits = 3, format = "f")`$$
+
+```{r maximum-likelihood, echo=FALSE}
+
+neg_likelihood <- function(kappa){
+  return(-log_likelihood(0.01, kappa, avg_frequencies, mt_cyb_df))
+}
+
+ml <- optim(c("kappa" = 2.1248), neg_likelihood, method = "Brent", lower = 0.5, upper = 3.0)
+
+```
+
+
 ## Implementing a simulation
 
 > Implement a simulation under your model for two sequences over an arbitrary distance t. Validate the program by simulation and show the results of you validation.
@@ -303,8 +380,28 @@ It's unclear if the (requested) applied model is a good choice for this example.
 The evolutionary distance given ($v = 0.01$) is much lower compared to the estimated distance $\hat{d}$ based on the K80 model [@Kimura1980]:
 
 $$\hat{d} = -\frac{1}{2}\ln(1-2S-V)-\frac{1}{4}\ln(1-2V) = `r round(d_hat, digits = 4)`$$
-This therefore influences the probabilities of the transition matrix. Changing that distance would 
-probably result in a better likelihood.
+This therefore influences the probabilities of the transition matrix. Changing that distance results in a better likelihood
+as following section proves.
 
+```{r maximum-likelihood-two-parameter}
+
+neg_likelihood_two_parameter <- function(x){
+  return(-log_likelihood(x["v"], x["kappa"], avg_frequencies, mt_cyb_df))
+}
+
+ml_two_parameter <- optim(c("v" = 0.01, "kappa" = kappa_hat), neg_likelihood_two_parameter)
+```
+
+If we look for the optimum of a combination of the two parameters $v$ and $\kappa$ we get following results:
+$$\hat{v} = `r formatC(ml_two_parameter$par[["v"]], digits = 3, format = "f")`$$
+$$\hat{\kappa} = `r formatC(ml_two_parameter$par[["kappa"]], digits = 3, format = "f")`$$
+
+with a log-likelihood of $\ell = `r formatC(-ml_two_parameter$value, digits = 3, format = "f")`$ 
+which is higher than the previously calculated maximum likelihood.
+
+
+## Disclosure
+TODO: Mention the help I got. (Teja, optim with two parameter)
 
 ## References
+TODO: cite R and packages
