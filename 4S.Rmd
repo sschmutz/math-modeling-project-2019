@@ -9,6 +9,8 @@ subtitle: |
 bibliography: bibliography.bib
 csl: nature.csl
 output: pdf_document
+header-includes:
+  - \usepackage{tikz}
 ---
 
 ```{r setup, include=FALSE}
@@ -149,6 +151,7 @@ transversion_difference <-
   pull(count) %>%
   sum() / length(mt_cyb$HOMOSAPIENSCYTB)
 
+d_hat <- -1/2*log(1-2*transition_difference-transversion_difference)-1/4*log(1-2*transversion_difference)
 kappa_hat <- 2*log(1-2*transition_difference-transversion_difference)/log(1-2*transversion_difference)-1
 
 ```
@@ -158,8 +161,8 @@ and transversional differences ($V = `r round(transversion_difference, digits = 
 by taking the sum of the corresponding fields from Table \ref{tab:nucleotide-comparisons}.  
 There are different definitions of the transition transversion rate ratio. [@doi:10.1093/acprof:oso/9780199602605.001.0001]
 It was decided to apply the measure used by Kimura [@Kimura1980] and Hasegawa et al. [@Hasegawa1985] ($\kappa=\alpha/\beta$).
-The estimate of transition transversion rate ratio ($\kappa$) can be calculated as follows [@doi:10.1093/acprof:oso/9780199602605.001.0001]:  
-$$\kappa = \frac{2\ln(1-2S-V)}{\ln(1-2V)}-1 = `r round(kappa_hat, digits = 4)`$$ 
+The estimate of transition transversion rate ratio ($\hat{\kappa}$) can be calculated as follows [@doi:10.1093/acprof:oso/9780199602605.001.0001]:  
+$$\hat{\kappa} = \frac{2\ln(1-2S-V)}{\ln(1-2V)}-1 = `r round(kappa_hat, digits = 4)`$$ 
 
 ### Substitution rate matrix
 The substitution rate matrix $Q$ of the HKY85 model [@Hasegawa1985] is defined as follows (rows and columns are ordered $`r nt_order`$):  
@@ -177,7 +180,7 @@ $$
 The diagonal of $Q$ is defined by the requirement that each row of a substitution rate matrix must sum to 0.  
 Using the steady-state distribution $\pi$ and transition transversion rate ratio $\kappa$ calculated above, we can fill in the rate matrix (without considering $\mu$ yet):
 
-```{r rate-matrix, echo=FALSE, results='asis'}
+```{r rate-matrix, echo=FALSE}
 pi_T <- avg_frequencies[1]
 pi_C <- avg_frequencies[2]
 pi_A <- avg_frequencies[3]
@@ -221,27 +224,70 @@ $$
 
 > By hand, compute the (log-)likelihood for the first 10 alignment positions given that the two sequences are separated by evolutionary distance of 0.01 expected substitutions per site.
 
-To compute the likelihood ($L$) and log-likelihood ($\ell$) we're given that the distance of the two sequences 
-from human and mouse is $d = 0.01$. This means that the predicted actual 
-mutations between the two sequences is 0.01 per position.  
-We assume that the mouse sequence is ancestral to the human sequence.  
-Using the following formulae [@wiki:Models_of_DNA_evolution], the the transition probabilities can be calculated:
+To compute the likelihood ($L$) and log-likelihood ($\ell$) the transition probability matrix is computed from the 
+substitution rate matrix $Q$ and evolutionary distance $v$ as follows: [@Huelsenbeck]
+
+```{r transition-matrix, echo=FALSE}
+v <- 0.01
+transition_matrix <- expm(rate_matrix*v)
+```
+
 
 $$
-\lambda = \frac{1}{2(\pi_{A}+\pi_{G})(\pi_{C}+\pi_{T})+2\kappa(\pi_{A}\pi_{G}+\pi_{C}\pi_{T})}
+P(v)=e^{Qv}=`r write_matex(formatC(transition_matrix, digits = 3, format = "f"))`
 $$
 
-$$
-P_{AA}(d,\kappa,\pi) = \frac{\pi_{A}(\pi_{A}+\pi_{G}+(\pi_{C}+\pi_{T})e^{-\lambda d})+\pi_{G}e^{-(1+(\pi_{A}+\pi_{G})(\kappa-1))\lambda d}}{\pi_{A}+\pi_{G}}
-$$
+We're given that the distance of the two sequences 
+from human and mouse is $v = 0.01$. This means that there are $0.01$ expected substitutions
+between the two sequences per position.  
+Since we're only given one distance, we assume a unrooted tree where the mouse sequence is ancestral to the human sequence.  
 
-For this example, likelihood is defined as the product of the likelihoods  
-of each of the 10 positions:  
-$$L = \prod_{j = 1}^{N} L_{(j)}$$
+\begin{center}
+\begin{tikzpicture}
+  \draw[-latex] (0,0) .. controls (0.5,1.3)  .. (1,0);
+  \node[inner sep=1pt, anchor=north] at (0,0) {$i$};
+  \node[inner sep=1pt, anchor=north] at (1,0) {$j$};
+  \node[inner sep=1pt, anchor=south] at (0.5,1) {$v = v_{1} + v_{2}$};
+\end{tikzpicture}
+\end{center}
+
+The likelihood is defined as the product of the probabilities for each site.
+To answer the question of the likelihood of the first ten alignment positions,
+we therefore need to compute these probabilities first:
+
+$$Pr_{AA}(v, \kappa, \pi)=\pi_{A}*p_{AA}(v)=`r formatC(pi_A, digits=3, format="f")`*`r formatC(transition_matrix["A","A"], digits=3, format="f")`=`r formatC(pi_A*transition_matrix["A","A"], digits=3, format="f")`$$
+$$Pr_{TT}(v, \kappa, \pi)=\pi_{T}*p_{TT}(v)=`r formatC(pi_T, digits=3, format="f")`*`r formatC(transition_matrix["T","T"], digits=3, format="f")`=`r formatC(pi_T*transition_matrix["T","T"], digits=3, format="f")`$$
+$$Pr_{GG}(v, \kappa, \pi)=\pi_{G}*p_{GG}(v)=`r formatC(pi_G, digits=3, format="f")`*`r formatC(transition_matrix["G","G"], digits=3, format="f")`=`r formatC(pi_G*transition_matrix["G","G"], digits=3, format="f")`$$
+$$Pr_{AA}(v, \kappa, \pi)=\pi_{A}*p_{AA}(v)=`r formatC(pi_A, digits=3, format="f")`*`r formatC(transition_matrix["A","A"], digits=3, format="f")`=`r formatC(pi_A*transition_matrix["A","A"], digits=3, format="f")`$$
+$$Pr_{CC}(v, \kappa, \pi)=\pi_{C}*p_{CC}(v)=`r formatC(pi_C, digits=3, format="f")`*`r formatC(transition_matrix["C","C"], digits=3, format = "f")`=`r formatC(pi_C*transition_matrix["C","C"], digits=3, format="f")`$$
+$$Pr_{AC}(v, \kappa, \pi)=\pi_{A}*p_{AC}(v)=`r formatC(pi_A, digits=3, format="f")`*`r formatC(transition_matrix["A","C"], digits=3, format="f")`=`r formatC(pi_A*transition_matrix["A","C"], digits=3, format="f")`$$
+$$Pr_{AC}(v, \kappa, \pi)=\pi_{A}*p_{AC}(v)=`r formatC(pi_A, digits=3, format="f")`*`r formatC(transition_matrix["A","C"], digits=3, format="f")`=`r formatC(pi_A*transition_matrix["A","C"], digits=3, format="f")`$$
+$$Pr_{AC}(v, \kappa, \pi)=\pi_{A}*p_{AC}(v)=`r formatC(pi_A, digits=3, format="f")`*`r formatC(transition_matrix["A","C"], digits=3, format="f")`=`r formatC(pi_A*transition_matrix["A","C"], digits=3, format="f")`$$
+$$Pr_{CA}(v, \kappa, \pi)=\pi_{C}*p_{CA}(v)=`r formatC(pi_C, digits=3, format="f")`*`r formatC(transition_matrix["C","A"], digits=3, format="f")`=`r formatC(pi_C*transition_matrix["C","A"], digits=3, format="f")`$$
+$$Pr_{AA}(v, \kappa, \pi)=\pi_{A}*p_{AA}(v)=`r formatC(pi_A, digits=3, format="f")`*`r formatC(transition_matrix["A","A"], digits=3, format="f")`=`r formatC(pi_A*transition_matrix["A","A"], digits=3, format="f")`$$
+
+```{r likelihood-10, echo=FALSE}
+Pr_1 <- pi_A*transition_matrix["A","A"]
+Pr_2 <- pi_T*transition_matrix["T","T"]
+Pr_3 <- pi_G*transition_matrix["G","G"]
+Pr_4 <- pi_A*transition_matrix["A","A"]
+Pr_5 <- pi_C*transition_matrix["C","C"]
+Pr_6 <- pi_A*transition_matrix["A","C"]
+Pr_7 <- pi_A*transition_matrix["A","C"]
+Pr_8 <- pi_A*transition_matrix["A","C"]
+Pr_9 <- pi_C*transition_matrix["A","C"]
+Pr_10 <- pi_A*transition_matrix["A","A"]
+
+L <- Pr_1*Pr_2*Pr_3*Pr_4*Pr_5*Pr_6*Pr_7*Pr_8*Pr_9*Pr_10
+l <- log(Pr_1)+log(Pr_2)+log(Pr_3)+log(Pr_4)+log(Pr_5)+log(Pr_6)+log(Pr_7)+log(Pr_8)+log(Pr_9)+log(Pr_10)
+```
+
+
+$$L = \prod_{j = 1}^{N} Pr_{(j)} = `r formatC(L, digits = 3, format = "e")`$$
 
 To avoid underflow (computer issue caused by very small numbers) log-likelihood 
 is often used:  
-$$\ell = \sum_{j = 1}^{N} ln(L_{(j)})$$
+$$\ell = \sum_{j = 1}^{N} \ln(Pr_{(j)}) = `r formatC(l, digits = 3, format = "f")`$$
 
 ### Computing using a program
 
@@ -253,6 +299,12 @@ $$\ell = \sum_{j = 1}^{N} ln(L_{(j)})$$
 
 ## Discussion
 
-It's unclear if the (requested) applied model is a good choice for this example. The transition transversion bias of the given sequence alignment is not very strong. Furthermore more complex models usually require more data to infer the parameter and are more prone to overfitting.
+It's unclear if the (requested) applied model is a good choice for this example. The transition transversion bias of the given sequence alignment is not very strong. Furthermore more complex models usually require more data to infer the parameter and are more prone to overfitting.  
+The evolutionary distance given ($v = 0.01$) is much lower compared to the estimated distance $\hat{d}$ based on the K80 model [@Kimura1980]:
+
+$$\hat{d} = -\frac{1}{2}\ln(1-2S-V)-\frac{1}{4}\ln(1-2V) = `r round(d_hat, digits = 4)`$$
+This therefore influences the probabilities of the transition matrix. Changing that distance would 
+probably result in a better likelihood.
+
 
 ## References
