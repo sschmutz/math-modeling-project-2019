@@ -283,11 +283,11 @@ l <- log(Pr_1)+log(Pr_2)+log(Pr_3)+log(Pr_4)+log(Pr_5)+log(Pr_6)+log(Pr_7)+log(P
 ```
 
 
-$$L = \prod_{j = 1}^{N} Pr_{(j)} = `r formatC(L, digits = 3, format = "e")`$$
+$$L = \prod_{site = 1}^{N} Pr_{site} = `r formatC(L, digits = 3, format = "e")`$$
 
 To avoid underflow (computer issue caused by very small numbers) log-likelihood 
 is often used:  
-$$\ell = \sum_{j = 1}^{N} \ln(Pr_{(j)}) = `r formatC(l, digits = 3, format = "f")`$$
+$$\ell = \sum_{site = 1}^{N} \ln(Pr_{site}) = `r formatC(l, digits = 3, format = "f")`$$
 
 ### Computing using a program
 
@@ -377,9 +377,9 @@ ml <- optim(c("kappa" = 2.1248), neg_likelihood, method = "Brent", lower = 0.5, 
 ## Discussion
 
 It's unclear if the (requested) applied model is a good choice for this example. The transition transversion bias of the given sequence alignment is not very strong. Furthermore more complex models usually require more data to infer the parameter and are more prone to overfitting.  
-The evolutionary distance given ($v = 0.01$) is much lower compared to the estimated distance $\hat{d}$ based on the K80 model [@Kimura1980]:
+The evolutionary distance given ($v = 0.01$) is much lower compared to the estimated distance $\hat{v}$ based on the K80 model [@Kimura1980]:
 
-$$\hat{d} = -\frac{1}{2}\ln(1-2S-V)-\frac{1}{4}\ln(1-2V) = `r round(d_hat, digits = 4)`$$
+$$\hat{v} = -\frac{1}{2}\ln(1-2S-V)-\frac{1}{4}\ln(1-2V) = `r round(d_hat, digits = 4)`$$
 This therefore influences the probabilities of the transition matrix. Changing that distance results in a better likelihood
 as following section proves.
 
@@ -392,7 +392,7 @@ neg_likelihood_two_parameter <- function(x){
 ml_two_parameter <- optim(c("v" = 0.01, "kappa" = kappa_hat), neg_likelihood_two_parameter)
 ```
 
-If we look for the optimum of a combination of the two parameters $v$ and $\kappa$ we get following results:
+If we look for the optimum (maximum likelihood) of a combination of the two parameters $v$ and $\kappa$ we get following results:
 $$\hat{v} = `r formatC(ml_two_parameter$par[["v"]], digits = 3, format = "f")`$$
 $$\hat{\kappa} = `r formatC(ml_two_parameter$par[["kappa"]], digits = 3, format = "f")`$$
 
@@ -403,58 +403,27 @@ which is higher than the previously calculated maximum likelihood.
 ## Disclosure
 TODO: Mention the help I got. (Teja, optim with two parameter)
 
-## Glossary
+## Notation
 
-$\pi$
-: steady-state distribution of nucleotides (frequencies)
+\begin{tabular}{cl}
+$\pi$ & steady-state distribution of nucleotides (frequencies) \\
+$S$ & transitional differences (frequencies) \\
+$V$ & transversional differences (frequencies) \\
+$\kappa$ & transition transversion rate ratio \\
+$\alpha$ & transition rate \\
+$\beta$ & transversion rate \\
+$Q$ & substitution rate matrix \\
+$q_{ij}$ & substitution rate from nucleotide i to j \\
+$q_{ii}$ & diagonal element of substitution rate matrix ($i = j$) \\
+$\mu$ & rescaling factor \\
+$P$ & transition probability matrix \\
+$v$ & evolutionary distance (expected substitutions per site) \\
+$L$ & likelihood \\
+$\ell$ & log-likelihood ($\log_e$) \\
+$Pr_{ij}$ & probability of observing nucleotide i and j \\
+$p_{ij}$ & probability of substition of nucleotide i to j \\
+\end{tabular}
 
-$S$
-: transitional differences (frequencies)
-
-$V$
-: transversional differences (frequencies)
-
-$\kappa$
-: transition transversion rate ratio
-
-$\alpha$
-:
-
-$\beta$
-:
-
-$Q$
-: substitution rate matrix
-
-$q_{ij}$
-:
-
-$q_{ii}$
-:
-
-$\mu$
-: 
-
-$P$
-:
-
-$v$
-:
-
-$L$
-:
-
-$\ell$
-:
-
-$Pr_{ij}$
-:
-
-$p_{ij}$
-:
-
-$v$
-:
 
 
 
