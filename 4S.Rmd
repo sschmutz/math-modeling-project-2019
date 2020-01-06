@@ -22,6 +22,7 @@ library(knitr)
 library(kableExtra)
 library(expm)
 
+
 write_matex <- function(x) {
   begin <- "\\left[\\begin{array}{rrrr}"
   end <- "\\end{array}\\right]"
@@ -350,16 +351,19 @@ log_likelihood_total <- log_likelihood(0.01, kappa_hat, avg_frequencies, mt_cyb_
 ```
 
 The function `log_likelihood` was written, which takes following arguments:  
+
 - `v`: evolutionary distance (expected substitutions per site)  
 - `kappa`: transition transversion rate ratio  
 - `pi`: vector of steady-state distribution of nucleotides (T, C, A, G)  
 - `df`: dataframe with alignment (organism in columns, sites in rows)  
 
-
-and returns the log-likelihood of the sequence alignment which in this case is:
+and returns the log-likelihood (using the estimated parameter values) of the sequence alignment which in this case is:
 $$\ell = `r formatC(log_likelihood_total, digits = 3, format = "f")`$$
 
-```{r maximum-likelihood, echo=FALSE}
+We can now fix all parameters except the transition transversion rate ratio $\kappa$ and look for the
+maximum log-likelihood (Figure \ref{fig:maximum-likelihood}).
+
+```{r maximum-likelihood, echo=FALSE, warning=FALSE, fig.width=3, fig.height=3, fig.align="center", fig.cap="Log-likelihood curve of the proposed model", fig.pos = "H"}
 
 neg_likelihood <- function(kappa){
   return(-log_likelihood(0.01, kappa, avg_frequencies, mt_cyb_df))
@@ -367,7 +371,29 @@ neg_likelihood <- function(kappa){
 
 ml <- optim(c("kappa" = 2.1248), neg_likelihood, method = "Brent", lower = 0.5, upper = 3.0)
 
+
+likelihood_df <- tibble(kappa = seq(0.5, 10, by = 0.1))
+l <- c()
+
+for (kappa in likelihood_df$kappa){
+  l <- c(l, log_likelihood(0.01, kappa,avg_frequencies, mt_cyb_df))
+}
+
+likelihood_df <- bind_cols(likelihood_df, l = l)
+
+ggplot(likelihood_df, aes(x = kappa, y = l)) +
+  geom_line() +
+  xlim(0, 6) +
+  ylim(-3150, -3100) +
+  theme_minimal() +
+  labs(x = expression(kappa), y = "log-likelihood")
 ```
+
+
+There's a transition transversion rate ratio which gives a slightly better likelihood:
+
+$$\hat{\kappa} = `r formatC(ml$par, digits = 3, format = "f")`$$
+$$\ell = `r formatC(-ml$value, digits = 3, format = "f")`$$
 
 
 ## Implementing a simulation
