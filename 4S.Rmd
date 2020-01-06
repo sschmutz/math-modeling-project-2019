@@ -328,8 +328,8 @@ log_likelihood <- function(v, kappa, pi, df){
     bind_cols(mouse = nt_order) %>%
     pivot_longer(cols = c(T, C, A, G), names_to = "human", values_to = "transition_probability")
   
-  mt_cyb_df_prob <-
-    mt_cyb_df %>%
+  df_prob <-
+    df %>%
     mutate(mouse = as.character(mouse),
            human = as.character(human)) %>%
     full_join(transition_matrix_df, by = c("mouse", "human")) %>%
@@ -343,7 +343,7 @@ log_likelihood <- function(v, kappa, pi, df){
     mutate(prob = pi * transition_probability,
            prob_log = log(prob))
   
-  return(sum(mt_cyb_df_prob$prob_log))
+  return(sum(df_prob$prob_log))
   
 }
 
@@ -371,10 +371,10 @@ neg_likelihood <- function(kappa){
 
 ml <- optim(c("kappa" = 2.1248), neg_likelihood, method = "Brent", lower = 0.5, upper = 3.0)
 
-log_likelihood_vectorized <- Vectorize(log_likelihood, vectorize.args = "kappa")
+log_likelihood_vectorized_kappa <- Vectorize(log_likelihood, vectorize.args = "kappa")
 
 ggplot(data.frame(kappa = c(0, 7)), aes(kappa)) +
-  stat_function(fun = log_likelihood_vectorized, args = list(v = 0.01, pi = avg_frequencies, df = mt_cyb_df)) +
+  stat_function(fun = log_likelihood_vectorized_kappa, args = list(v = 0.01, pi = avg_frequencies, df = mt_cyb_df)) +
   xlim(0, 6) +
   ylim(-3150, -3100) +
   theme_minimal() +
@@ -392,6 +392,47 @@ $$\ell = `r formatC(-ml$value, digits = 3, format = "f")`$$
 ## Implementing a simulation
 
 > Implement a simulation under your model for two sequences over an arbitrary distance $v$. Validate the program by simulation and show the results of you validation.
+
+To simulate two aligned sequences over a distance of $v = 0.3$ and the previously defined substitution rate matrix $Q$ 
+it's assumed that the substitutions happen independantly across sites.  
+1000 pairwise alignments of length 100 will be simulated.
+
+```{r simulation, echo=FALSE}
+set.seed(202001)
+
+transition_matrix_03 <- expm(rate_matrix*0.3)
+
+simulations <-
+  crossing(alignment = 1:10,
+           site = 1:10) %>%
+  rowwise() %>%
+  mutate(mouse = sample(nt_order, size = 1, prob = avg_frequencies)) %>%
+  ungroup() %>%
+  mutate(mouse = fct_relevel(mouse, nt_order),
+         mouse_index = as.integer(mouse)) %>%
+  rowwise() %>%
+  mutate(human = sample(nt_order, size = 1, prob = transition_matrix_03[mouse_index,])) %>%
+  ungroup() %>%
+  mutate(human = fct_relevel(human, nt_order))
+
+log_likelihood_vectorized_df <- Vectorize(log_likelihood, vectorize.args = "df")
+
+simulations_seqs <-
+  simulations %>%
+  select(-site, -mouse_index) %>%
+  nest(seqs = -alignment) %>%
+  mutate(l = log_likelihood_vectorized_df(0.3, kappa_hat, avg_frequencies, seqs))
+
+# simulations %>%
+#   group_by(mouse) %>%
+#   summarise(n = n())
+# 
+# simulations %>%
+#   group_by(human) %>%
+#   summarise(n = n())
+
+```
+
 
 ## Discussion
 
