@@ -89,7 +89,7 @@ nt_frequencies <-
 
 nt_frequencies %>%
   pivot_wider(-count, names_from = "organism", values_from = "frequency") %>%
-  kable(caption = "Nucleotide frequencies") %>%
+  kable(caption = "Nucleotide frequencies", booktabs = TRUE) %>%
   kable_styling(full_width = F, latex_options = "hold_position")
 
 avg_frequencies <-
@@ -122,7 +122,7 @@ nt_comparisons_matrix <-
   matrix(nt_comparisons$count, nrow = 4, byrow = TRUE, dimnames = list(nt_order, nt_order))
 
 round(nt_comparisons_matrix / length(mt_cyb$HOMOSAPIENSCYTB), digits = 4) %>%
-  kable(caption = "Nucleotide comparisons (frequencies)") %>%
+  kable(caption = "Nucleotide comparisons (frequencies)", booktabs = TRUE) %>%
   kable_styling(full_width = F, latex_options = "hold_position")
 ```
 
@@ -402,6 +402,61 @@ which is higher than the previously calculated maximum likelihood.
 
 ## Disclosure
 TODO: Mention the help I got. (Teja, optim with two parameter)
+
+## Glossary
+
+$\pi$
+: steady-state distribution of nucleotides (frequencies)
+
+$S$
+: transitional differences (frequencies)
+
+$V$
+: transversional differences (frequencies)
+
+$\kappa$
+: transition transversion rate ratio
+
+$\alpha$
+:
+
+$\beta$
+:
+
+$Q$
+: substitution rate matrix
+
+$q_{ij}$
+:
+
+$q_{ii}$
+:
+
+$\mu$
+: 
+
+$P$
+:
+
+$v$
+:
+
+$L$
+:
+
+$\ell$
+:
+
+$Pr_{ij}$
+:
+
+$p_{ij}$
+:
+
+$v$
+:
+
+
 
 ## References
 TODO: cite R and packages
