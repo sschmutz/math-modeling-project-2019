@@ -347,7 +347,7 @@ log_likelihood <- function(v, kappa, pi, df){
   
 }
 
-log_likelihood_total <- log_likelihood(0.01, kappa_hat, avg_frequencies, mt_cyb_df)
+log_likelihood_total <- log_likelihood(v, kappa_hat, avg_frequencies, mt_cyb_df)
 ```
 
 The function `log_likelihood` was written, which takes following arguments:  
@@ -366,7 +366,7 @@ maximum log-likelihood (Figure \ref{fig:maximum-likelihood}).
 ```{r maximum-likelihood, echo=FALSE, warning=FALSE, fig.width=3, fig.height=3, fig.align="center", fig.cap="Log-likelihood curve of the proposed model", fig.pos = "H"}
 
 neg_likelihood <- function(kappa){
-  return(-log_likelihood(0.01, kappa, avg_frequencies, mt_cyb_df))
+  return(-log_likelihood(v, kappa, avg_frequencies, mt_cyb_df))
 }
 
 ml <- optim(c("kappa" = 2.1248), neg_likelihood, method = "Brent", lower = 0.5, upper = 3.0)
@@ -374,7 +374,7 @@ ml <- optim(c("kappa" = 2.1248), neg_likelihood, method = "Brent", lower = 0.5, 
 log_likelihood_vectorized_kappa <- Vectorize(log_likelihood, vectorize.args = "kappa")
 
 ggplot(data.frame(kappa = c(0, 7)), aes(kappa)) +
-  stat_function(fun = log_likelihood_vectorized_kappa, args = list(v = 0.01, pi = avg_frequencies, df = mt_cyb_df)) +
+  stat_function(fun = log_likelihood_vectorized_kappa, args = list(v = v, pi = avg_frequencies, df = mt_cyb_df)) +
   xlim(0, 6) +
   ylim(-3150, -3100) +
   theme_minimal() +
@@ -393,25 +393,22 @@ $$\ell = `r formatC(-ml$value, digits = 3, format = "f")`$$
 
 > Implement a simulation under your model for two sequences over an arbitrary distance $v$. Validate the program by simulation and show the results of you validation.
 
-To simulate two aligned sequences over a distance of $v = 0.3$ and the previously defined substitution rate matrix $Q$ 
-it's assumed that the substitutions happen independantly across sites.  
-1000 pairwise alignments of length 100 will be simulated.
-
 ```{r simulation, echo=FALSE}
 set.seed(202001)
 
-transition_matrix_03 <- expm(rate_matrix*0.3)
+alignments <- 1000
+length <- length(mt_cyb$HOMOSAPIENSCYTB)
 
 simulations <-
-  crossing(alignment = 1:10,
-           site = 1:10) %>%
+  crossing(alignment = 1:alignments,
+           site = 1:length) %>%
   rowwise() %>%
   mutate(mouse = sample(nt_order, size = 1, prob = avg_frequencies)) %>%
   ungroup() %>%
   mutate(mouse = fct_relevel(mouse, nt_order),
          mouse_index = as.integer(mouse)) %>%
   rowwise() %>%
-  mutate(human = sample(nt_order, size = 1, prob = transition_matrix_03[mouse_index,])) %>%
+  mutate(human = sample(nt_order, size = 1, prob = transition_matrix[mouse_index,])) %>%
   ungroup() %>%
   mutate(human = fct_relevel(human, nt_order))
 
@@ -421,7 +418,23 @@ simulations_seqs <-
   simulations %>%
   select(-site, -mouse_index) %>%
   nest(seqs = -alignment) %>%
-  mutate(l = log_likelihood_vectorized_df(0.3, kappa_hat, avg_frequencies, seqs))
+  mutate(l = log_likelihood_vectorized_df(v, kappa_hat, avg_frequencies, seqs))
+```
+
+
+To simulate two aligned sequences over a distance of $v = `r v`$ and the previously defined substitution rate matrix $Q$ 
+it's assumed that the substitutions happen independantly across sites.  
+`r alignments` pairwise alignments of length `r length` nt will be simulated.
+
+```{r simulation-plot, echo=FALSE, message=FALSE, fig.width=3, fig.height=3, fig.align="center", fig.cap="Log-likelihood distribution of simulated sequences", fig.pos = "H"}
+
+
+simulations_seqs %>%
+  ggplot(aes(l)) +
+  geom_histogram() +
+  theme_minimal() +
+  labs(x = "log-likelihood")
+
 
 # simulations %>%
 #   group_by(mouse) %>%
@@ -450,7 +463,7 @@ neg_likelihood_two_parameter <- function(x){
   return(-log_likelihood(x["v"], x["kappa"], avg_frequencies, mt_cyb_df))
 }
 
-ml_two_parameter <- optim(c("v" = 0.01, "kappa" = kappa_hat), neg_likelihood_two_parameter)
+ml_two_parameter <- optim(c("v" = v, "kappa" = kappa_hat), neg_likelihood_two_parameter)
 ```
 
 If we look for the optimum (maximum likelihood) of a combination of the two parameters $v$ and $\kappa$ we get following results:
