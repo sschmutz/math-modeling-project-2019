@@ -396,7 +396,7 @@ $$\ell = `r formatC(-ml$value, digits = 3, format = "f")`$$
 ```{r simulation, echo=FALSE}
 set.seed(202001)
 
-alignments <- 1000
+alignments <- 10000
 length <- length(mt_cyb$HOMOSAPIENSCYTB)
 
 simulations <-
@@ -424,7 +424,11 @@ simulations_seqs <-
 
 To simulate two aligned sequences over a distance of $v = `r v`$ and the previously defined substitution rate matrix $Q$ 
 it's assumed that the substitutions happen independantly across sites.  
-`r alignments` pairwise alignments of length `r length` nt will be simulated.
+`r alignments` pairwise alignments of length `r length` nt were be simulated.
+The log-likelihood of each simulated alignment was computed and the distribution
+is shown in Figure \ref{fig:simulation-plot}.  
+Much higher log-likelihoods compared to what was calculated earlier hints that
+the given distance might not be an accurate assumption (see Discussion).
 
 ```{r simulation-plot, echo=FALSE, message=FALSE, fig.width=3, fig.height=3, fig.align="center", fig.cap="Log-likelihood distribution of simulated sequences", fig.pos = "H"}
 
@@ -435,7 +439,14 @@ simulations_seqs %>%
   theme_minimal() +
   labs(x = "log-likelihood")
 
+```
 
+
+To validate the model, we can compare the probabilities for each of the 16 site patterns with the
+observed frequencies from the simulated alignments (Table \ref{tab:simulation-table}).  
+The calculated values are very close to the observed frequencies which confirmes the model.
+
+```{r simulation-table, echo=FALSE, warning=FALSE}
 # simulations %>%
 #   group_by(mouse) %>%
 #   summarise(n = n())
@@ -443,6 +454,29 @@ simulations_seqs %>%
 # simulations %>%
 #   group_by(human) %>%
 #   summarise(n = n())
+
+transition_matrix_df <-
+  as_tibble(transition_matrix) %>%
+  bind_cols(mouse = nt_order) %>%
+  pivot_longer(cols = c(T, C, A, G), names_to = "human", values_to = "transition_probability")
+
+pattern_sim <-
+  simulations %>%
+  select(mouse, human) %>%
+  mutate(pattern = paste0(mouse, human)) %>%
+  group_by(pattern) %>%
+  summarise(frequency = n()/(alignments*length)) %>%
+  mutate(mouse = fct_relevel(substr(pattern, 1, 1), nt_order),
+         human = fct_relevel(substr(pattern, 2, 2), nt_order),
+         mouse_index = as.integer(mouse),
+         human_index = as.integer(human)) %>%
+  full_join(transition_matrix_df, by = c("mouse", "human")) %>%
+  mutate(probability = avg_frequencies[mouse_index] * transition_probability) %>%
+  select(pattern, frequency, probability)
+
+pattern_sim %>%
+  kable(caption = "Pattern frequencies and probabilities", booktabs = TRUE, digits = 4, linesep = "", longtable = TRUE) %>%
+  kable_styling(full_width = F, latex_options = c("repeat_header"))
 
 ```
 
