@@ -1,6 +1,6 @@
 library(tidyverse)
 library(seqinr)
-
+library(ape)
 
 nt_order <- c("T", "C", "A", "G")
 
@@ -84,6 +84,33 @@ distance_JC69 <- -3/4*log(1-4/3*substitution_rate)
 var_distance_JC69 <- substitution_rate*(1-substitution_rate)/total_length*(1/(1-4*substitution_rate/3)**2)
 sd_distance_JC69 <- sqrt(var_distance_JC69)
 
+
+# using the ape package to check result
+dist.dna(as.DNAbin(example), model = "JC69", variance = TRUE, as.matrix = TRUE)
+
+
+# F81 ---------------------------------------------------------------------
+avg_frequencies <-
+  nt_frequencies_example %>%
+  group_by(nucleotide) %>%
+  summarise(count_all = sum(count),
+            frequency = count_all/(total_length*2)) %>%
+  pull(frequency)
+
+pi_T <- avg_frequencies[1]
+pi_C <- avg_frequencies[2]
+pi_A <- avg_frequencies[3]
+pi_G <- avg_frequencies[4]
+
+p <- substitution_rate # observed proportion of change
+E <- 1-(pi_A^2 + pi_C^2 + pi_G^2 + pi_T^2)
+
+distance_F81 <- -E*log(1-p/E)
+
+
+
+
+dist.dna(as.DNAbin(example), model = "F81")
 
 # K80 ---------------------------------------------------------------------
 
