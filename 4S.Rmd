@@ -235,7 +235,7 @@ $$\hat{\kappa} = \frac{S/4}{V/8} = `r formatC(kappa_hat, digits = 3, format = "f
 If $\kappa = 1$ this means that there's no difference in transition and transversion substitutions (no bias). 
 We see that our $\hat{\kappa}$ is slightly above $1$ which indicates a bias towards transitions.
 
-```{r different-estimates}
+```{r different-estimates, warning=FALSE}
 
 # JC69 -------------------------------------------------------------------------
 # distance formulae to estimate parameters under the JC69 model
@@ -461,8 +461,7 @@ log_likelihood_vectorized_kappa <- Vectorize(log_likelihood, vectorize.args = "k
 
 ggplot(data.frame(kappa = c(0, 7)), aes(kappa)) +
   stat_function(fun = log_likelihood_vectorized_kappa, args = list(v = v, pi = avg_frequencies, df = mt_cyb_df)) +
-  xlim(0, 6) +
-  ylim(-3150, -3100) +
+  coord_cartesian(xlim = c(0, 6), ylim = c(-3150, -3100)) +
   theme_minimal() +
   labs(x = expression(kappa), y = "log-likelihood")
 
@@ -595,10 +594,19 @@ which is higher than the previously calculated maximum likelihood.
 
 ## Appendix
 
+As mentioned above, there exist many different established Markov models of nucleotide substitution. 
+In Table \ref{tab:different-estimates} are the results using the given alignment under different models 
+(JC69 [@jukes1969evolution], K80 [@Kimura1980], F81 [@Felsenstein1981], HKY85 [@Hasegawa1985]).
+The results were computed using either formulae 
+where possible [@doi:10.1093/acprof:oso/9780199602605.001.0001; @McGuire] or maximum likelihood [@doi:10.1093/acprof:oso/9780199602605.001.0001].
+
+\begin{table}[h]
+\centering
+\caption{\label{tab:different-estimates}Comparing estimates using different models.}
 \begin{tabular}{lllll}
 \toprule
 Model and method & $\hat{v}$ & $\hat{\kappa}$ & $\hat{\pi}$ & $\ell$ \\\midrule
-Distance formulae \\
+Formulae \\
 JC69 & `r formatC(v_hat_JC69, digits = 4, format = "f")` \\
 K80 & `r formatC(v_hat_K80, digits = 4, format = "f")` & `r formatC(kappa_hat_K80, digits = 4, format = "f")` \\
 F81 & `r formatC(v_hat_F81, digits = 4, format = "f")` \\
@@ -609,6 +617,7 @@ F81 \\
 HKY85 \\
 \bottomrule
 \end{tabular}
+\end{table}
 
 ## Disclosure
 TODO: Mention the help I got. (Teja, optim with two parameter)
