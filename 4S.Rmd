@@ -11,6 +11,7 @@ csl: nature.csl
 output: pdf_document
 header-includes:
   - \usepackage{tikz}
+  - \usepackage{bm}
 ---
 
 ```{r setup, include=FALSE}
@@ -52,7 +53,7 @@ log_likelihood <- function(v, kappa, pi, df){
   pi_G <- pi[4]
 
   # compute the rate matrix without considering mu first
-  rate_matrix <-
+  rate_matrix_mu <-
     frame_matrix(
       ~T, ~C, ~A, ~G,
       0-kappa*pi_C-pi_A-pi_G, kappa*pi_C, pi_A, pi_G,
@@ -62,8 +63,8 @@ log_likelihood <- function(v, kappa, pi, df){
     )
   
   # calculate mu and update the rate matrix
-  mu <- -1/(pi_T*rate_matrix[[1,1]] + pi_C*rate_matrix[[2,2]] + pi_A*rate_matrix[[3,3]] + pi_G*rate_matrix[[4,4]])
-  rate_matrix <- rate_matrix*mu
+  mu <- -1/(pi_T*rate_matrix_mu[[1,1]] + pi_C*rate_matrix_mu[[2,2]] + pi_A*rate_matrix_mu[[3,3]] + pi_G*rate_matrix_mu[[4,4]])
+  rate_matrix <- rate_matrix_mu*mu
   
   # use described formula and matrix exponentiation to compute the transition matrix
   transition_matrix <- expm(rate_matrix*v)
@@ -113,17 +114,18 @@ mt_cyb_df <-
 DNA, the molecule essential for known life, consists of four building blocks. 
 Those blocks (thymine (T), cytosine (C), adenine (A), guanine (G)) are called nucleotides. [@wiki:DNA]  
 Since DNA evolves over time, substitutions (change of nucleotides) occur. 
-For structural reasons, transitions (substitutions between A and G or T and C), 
+For structural reasons, transitions (substitutions between A and G or T and C) 
 are more likely to happen compared to transversions (all other substitutions)
 in the majority of the cases [@10.1371/journal.pgen.0030022].
 
 The aim of this work is to describe a Markov model of nucleotide substitution 
 over time which consideres nucleotide- and transition/transversion-bias.  
-The four nucleotides of DNA represent the four different states of the Markov model.  
+The four nucleotides of DNA represent the four states of the Markov model.  
 Other parameters needed for the model are the steady-state distribution ($\pi$) and 
-state transition probabilities. Those parameters will be estimated in the next section 
+state transition probabilities ($\bm{P}$). Those parameters will be estimated in the next section 
 and are based on a pairwise sequence alignment of human and mouse cytochrome b (MT-CYB) 
 which is a mitochondrial gene [@doi:10.1056/NEJM199909303411404].
+
 
 ## Estimations to parameterize the model
 There are several different Markov models of nucleotide substitution described in the literature [@doi:10.1093/acprof:oso/9780199602605.001.0001]. The HKY85 model [@Hasegawa1985] was chosen because it considers nucleotide- and transition/transversion-bias.
@@ -136,7 +138,7 @@ A way to estimate the nucleotide frequencies is to count the occurences and
 divide them by the total length.  
 Since we're working with a pairwise alignment without indels, the total length
 of both sequences is the same (`r length(mt_cyb$HOMOSAPIENSCYTB)` nt). 
-The detailed composition is listed in Table \ref{tab:nucleotide-frequencies}.  
+The detailed nucleotide composition is listed in Table \ref{tab:nucleotide-frequencies}.  
 
 ```{r nucleotide-frequencies}
 
@@ -165,7 +167,8 @@ nt_frequencies %>%
 
 ```
 
-We assume that the mean of this distribution is the steady-state distribution $\pi$.  
+We assume that the mean of this distribution is the steady-state distribution $\pi$. 
+As $v \to \infty$ the equation $\pi\bm{P}(v)=\pi$ is true [@doi:10.1093/acprof:oso/9780199602605.001.0001].
 
 $$\pi = (\pi_{T}, \pi_{C}, \pi_{A}, \pi_{G}) = (`r round(avg_frequencies, digits = 3)`)$$
 
@@ -193,7 +196,7 @@ round(nt_comparisons_matrix, digits = 3) %>%
 
 ```
 
-```{r rate-ratios}
+```{r rate-ratio}
 
 # count all transitional differences
 S <-
@@ -219,14 +222,16 @@ V <-
   pull(count) %>%
   sum() / alignment_length
 
+# simple estimate of the transition transversion rate ratio (kappa)
 kappa_hat <- (S/4)/(V/8)
 
 ```
 
-The fraction of sites with transitional differences ($S = `r round(S, digits = 3)`$)
-and transversional differences ($V = `r round(V, digits = 3)`$) can be estimated
+The fraction of sites with transitional differences ($S = `r round(S, digits = 3)`$) 
+and transversional differences ($V = `r round(V, digits = 3)`$) can be estimated 
 by taking the sum of the corresponding fields from Table \ref{tab:nucleotide-comparisons}.  
-There are different definitions of the transition transversion rate ratio. [@doi:10.1093/acprof:oso/9780199602605.001.0001]  
+
+There are different definitions of the transition transversion rate ratio  [@doi:10.1093/acprof:oso/9780199602605.001.0001].  
 A simple way to estimate the transition transversion rate ratio ($\hat{\kappa}$) 
 is to divide the mean transitional differences by the mean transversional differences:
 
@@ -238,7 +243,7 @@ We see that our $\hat{\kappa}$ is slightly above $1$ which indicates a bias towa
 ```{r different-estimates, warning=FALSE}
 
 # JC69 -------------------------------------------------------------------------
-# distance formulae to estimate parameters under the JC69 model
+# distance formula to estimate the parameter under the JC69 model
 differences <-
   nt_comparisons %>%
   filter(mouse != human) %>%
@@ -254,7 +259,7 @@ neg_l_JC69 <-
     return(-l_JC69)
   }
 
-JC69_ml_list <- optimize(neg_l_JC69, interval = c(0.001, 1))
+JC69_ml_list <- optimize(neg_l_JC69, interval = c(0.001, 10))
 
 v_hat_JC69_ml <- JC69_ml_list$minimum
 l_JC69 <- -JC69_ml_list$objective
@@ -264,10 +269,6 @@ l_JC69 <- -JC69_ml_list$objective
 # distance formulae to estimate parameters under the K80 model
 v_hat_K80 <- -1/2*log(1-2*S-V)-1/4*log(1-2*V)
 kappa_hat_K80 <- 2*log(1-2*S-V)/log(1-2*V)-1
-
-p0_K80 <- 1/4+1/4*exp((-4*v_hat_K80)/(kappa_hat_K80+2))+1/2*exp((-2*v_hat_K80*(kappa_hat_K80+1))/(kappa_hat_K80+2))
-p1_K80 <- 1/4+1/4*exp((-4*v_hat_K80)/(kappa_hat_K80+2))-1/2*exp((-2*v_hat_K80*(kappa_hat_K80+1))/(kappa_hat_K80+2))
-p2_K80 <- 1/4-1/4*exp((-4*v_hat_K80)/(kappa_hat_K80+2))
 
 # maximum likelihood estimate under the K80 model
 neg_l_K80 <-
@@ -284,7 +285,7 @@ l_K80 <- -K80_ml_list$value
 
 
 # F81 --------------------------------------------------------------------------
-# distance formulae to estimate parameters under the F81 model
+# distance formula to estimate the parameter under the F81 model
 v_hat_F81 <- -(1-sum(avg_frequencies^2))*log(1-(S+V)/(1-sum(avg_frequencies^2)))
 
 # maximum likelihood estimate under the F81 model
@@ -321,10 +322,10 @@ l_HKY85 <- -HKY85_ml_list$value
 ```
 
 ### Substitution rate matrix
-The substitution rate matrix $Q$ of the HKY85 model [@Hasegawa1985] is defined as follows (rows and columns are ordered $`r nt_order`$):  
+The substitution rate matrix $\bm{Q}$ of the HKY85 model [@Hasegawa1985] is defined as follows (rows and columns are ordered $`r nt_order`$):  
 
 $$
-Q=\{q_{ij}\}=
+\bm{Q}=\{q_{ij}\}=
 \begin{bmatrix}
 . & \kappa \pi_{C} & \pi_{A} & \pi_{G}\\
 \kappa \pi_{T} & . & \pi_{A} & \pi_{G} \\
@@ -333,16 +334,17 @@ Q=\{q_{ij}\}=
 \end{bmatrix}\mu
 $$
 
-The diagonal of $Q$ is defined by the requirement that each row of a substitution rate matrix must sum to 0.  
+The diagonal of $\bm{Q}$ is defined by the requirement that each row of a rate matrix must sum to 0.  
 Using the steady-state distribution $\pi$ and transition transversion rate ratio $\kappa$ estimated above, we can fill in the rate matrix (without considering $\mu$ yet):
 
 ```{r rate-matrix}
+
 pi_T <- avg_frequencies[1]
 pi_C <- avg_frequencies[2]
 pi_A <- avg_frequencies[3]
 pi_G <- avg_frequencies[4]
 
-rate_matrix <-
+rate_matrix_mu <-
   frame_matrix(
     ~T, ~C, ~A, ~G,
     0-kappa_hat*pi_C-pi_A-pi_G, kappa_hat*pi_C, pi_A, pi_G,
@@ -350,27 +352,29 @@ rate_matrix <-
     pi_T, pi_C, 0-pi_T-pi_C-kappa_hat*pi_G, kappa_hat*pi_G,
     pi_T, pi_C, kappa_hat*pi_A, 0-pi_T-pi_C-kappa_hat*pi_A
   )
+
 ```
 
 $$
-Q=\{q_{ij}\}=
-`r write_matex(formatC(rate_matrix, digits = 3, format = "f"))`
+\bm{Q}=\{q_{ij}\}=
+`r write_matex(formatC(rate_matrix_mu, digits = 3, format = "f"))`
 \mu
 $$
 
-The factor $\mu$ rescales the matrix that the mean substitutionrate is one. It can be calculated as follows: [@Huelsenbeck]
-```{r mu}
-mu <- -1/(pi_T*rate_matrix[[1,1]] + pi_C*rate_matrix[[2,2]] + pi_A*rate_matrix[[3,3]] + pi_G*rate_matrix[[4,4]])
+The factor $\mu$ rescales the matrix that the mean substitution rate is one. It can be calculated as follows: [@Huelsenbeck]
 
-rate_matrix <- rate_matrix * mu
+```{r mu}
+
+mu <- -1/(pi_T*rate_matrix_mu[[1,1]] + pi_C*rate_matrix_mu[[2,2]] + pi_A*rate_matrix_mu[[3,3]] + pi_G*rate_matrix_mu[[4,4]])
+
+rate_matrix <- rate_matrix_mu * mu
 
 ```
 
 $$\mu = \frac{-1}{\sum_{i \in \{T,C,A,G\}}\pi_{i}q_{ii}} = `r round(mu, digits = 3)`$$
 
-
 $$
-Q=\{q_{ij}\}=
+\bm{Q}=\{q_{ij}\}=
 `r write_matex(formatC(rate_matrix, digits = 3, format = "f"))`
 $$
 
@@ -381,22 +385,22 @@ $$
 > By hand, compute the (log-)likelihood for the first 10 alignment positions given that the two sequences are separated by evolutionary distance of 0.01 expected substitutions per site.
 
 To compute the likelihood ($L$) and log-likelihood ($\ell$) the transition probability matrix is computed from the 
-substitution rate matrix $Q$ and evolutionary distance $v$ as follows: [@Huelsenbeck]
+substitution rate matrix $\bm{Q}$ and evolutionary distance $v$ as follows: [@Huelsenbeck]
 
 ```{r transition-matrix}
-v <- 0.01
-transition_matrix <- expm(rate_matrix*v)
+
+transition_matrix_0_01 <- expm(rate_matrix*0.01)
+
 ```
 
-
 $$
-P(v)=e^{Qv}=`r write_matex(formatC(transition_matrix, digits = 3, format = "f"))`
+\bm{P}(v)=e^{\bm{Q}v}=`r write_matex(formatC(transition_matrix_0_01, digits = 3, format = "f"))`
 $$
 
 We're given that the distance of the two sequences 
 from human and mouse is $v = 0.01$. This means that there are $0.01$ expected substitutions
 between the two sequences per position.  
-Since we're only given one distance, we assume a unrooted tree where the mouse sequence is ancestral to the human sequence.  
+Since we're only given one distance, we assume an unrooted tree where the mouse sequence is ancestral to the human sequence.  
 
 \begin{center}
 \begin{tikzpicture}
@@ -407,32 +411,32 @@ Since we're only given one distance, we assume a unrooted tree where the mouse s
 \end{tikzpicture}
 \end{center}
 
-The likelihood is defined as the product of the probabilities for each site.
+The likelihood is defined as the product of the probabilities for each site.  
 To answer the question of the likelihood of the first ten alignment positions,
 we therefore need to compute these probabilities first:
 
-$$Pr_{AA}(v, \kappa, \pi)=\pi_{A}*p_{AA}(v)=`r formatC(pi_A, digits=3, format="f")`*`r formatC(transition_matrix["A","A"], digits=3, format="f")`=`r formatC(pi_A*transition_matrix["A","A"], digits=3, format="f")`$$
-$$Pr_{TT}(v, \kappa, \pi)=\pi_{T}*p_{TT}(v)=`r formatC(pi_T, digits=3, format="f")`*`r formatC(transition_matrix["T","T"], digits=3, format="f")`=`r formatC(pi_T*transition_matrix["T","T"], digits=3, format="f")`$$
-$$Pr_{GG}(v, \kappa, \pi)=\pi_{G}*p_{GG}(v)=`r formatC(pi_G, digits=3, format="f")`*`r formatC(transition_matrix["G","G"], digits=3, format="f")`=`r formatC(pi_G*transition_matrix["G","G"], digits=3, format="f")`$$
-$$Pr_{AA}(v, \kappa, \pi)=\pi_{A}*p_{AA}(v)=`r formatC(pi_A, digits=3, format="f")`*`r formatC(transition_matrix["A","A"], digits=3, format="f")`=`r formatC(pi_A*transition_matrix["A","A"], digits=3, format="f")`$$
-$$Pr_{CC}(v, \kappa, \pi)=\pi_{C}*p_{CC}(v)=`r formatC(pi_C, digits=3, format="f")`*`r formatC(transition_matrix["C","C"], digits=3, format = "f")`=`r formatC(pi_C*transition_matrix["C","C"], digits=3, format="f")`$$
-$$Pr_{AC}(v, \kappa, \pi)=\pi_{A}*p_{AC}(v)=`r formatC(pi_A, digits=3, format="f")`*`r formatC(transition_matrix["A","C"], digits=3, format="f")`=`r formatC(pi_A*transition_matrix["A","C"], digits=3, format="f")`$$
-$$Pr_{AC}(v, \kappa, \pi)=\pi_{A}*p_{AC}(v)=`r formatC(pi_A, digits=3, format="f")`*`r formatC(transition_matrix["A","C"], digits=3, format="f")`=`r formatC(pi_A*transition_matrix["A","C"], digits=3, format="f")`$$
-$$Pr_{AC}(v, \kappa, \pi)=\pi_{A}*p_{AC}(v)=`r formatC(pi_A, digits=3, format="f")`*`r formatC(transition_matrix["A","C"], digits=3, format="f")`=`r formatC(pi_A*transition_matrix["A","C"], digits=3, format="f")`$$
-$$Pr_{CA}(v, \kappa, \pi)=\pi_{C}*p_{CA}(v)=`r formatC(pi_C, digits=3, format="f")`*`r formatC(transition_matrix["C","A"], digits=3, format="f")`=`r formatC(pi_C*transition_matrix["C","A"], digits=3, format="f")`$$
-$$Pr_{AA}(v, \kappa, \pi)=\pi_{A}*p_{AA}(v)=`r formatC(pi_A, digits=3, format="f")`*`r formatC(transition_matrix["A","A"], digits=3, format="f")`=`r formatC(pi_A*transition_matrix["A","A"], digits=3, format="f")`$$
+$$Pr_{AA}(v, \kappa, \pi)=\pi_{A}*p_{AA}(v)=`r formatC(pi_A, digits=3, format="f")`*`r formatC(transition_matrix_0_01["A","A"], digits=3, format="f")`=`r formatC(pi_A*transition_matrix_0_01["A","A"], digits=3, format="f")`$$
+$$Pr_{TT}(v, \kappa, \pi)=\pi_{T}*p_{TT}(v)=`r formatC(pi_T, digits=3, format="f")`*`r formatC(transition_matrix_0_01["T","T"], digits=3, format="f")`=`r formatC(pi_T*transition_matrix_0_01["T","T"], digits=3, format="f")`$$
+$$Pr_{GG}(v, \kappa, \pi)=\pi_{G}*p_{GG}(v)=`r formatC(pi_G, digits=3, format="f")`*`r formatC(transition_matrix_0_01["G","G"], digits=3, format="f")`=`r formatC(pi_G*transition_matrix_0_01["G","G"], digits=3, format="f")`$$
+$$Pr_{AA}(v, \kappa, \pi)=\pi_{A}*p_{AA}(v)=`r formatC(pi_A, digits=3, format="f")`*`r formatC(transition_matrix_0_01["A","A"], digits=3, format="f")`=`r formatC(pi_A*transition_matrix_0_01["A","A"], digits=3, format="f")`$$
+$$Pr_{CC}(v, \kappa, \pi)=\pi_{C}*p_{CC}(v)=`r formatC(pi_C, digits=3, format="f")`*`r formatC(transition_matrix_0_01["C","C"], digits=3, format = "f")`=`r formatC(pi_C*transition_matrix_0_01["C","C"], digits=3, format="f")`$$
+$$Pr_{AC}(v, \kappa, \pi)=\pi_{A}*p_{AC}(v)=`r formatC(pi_A, digits=3, format="f")`*`r formatC(transition_matrix_0_01["A","C"], digits=3, format="f")`=`r formatC(pi_A*transition_matrix_0_01["A","C"], digits=3, format="f")`$$
+$$Pr_{AC}(v, \kappa, \pi)=\pi_{A}*p_{AC}(v)=`r formatC(pi_A, digits=3, format="f")`*`r formatC(transition_matrix_0_01["A","C"], digits=3, format="f")`=`r formatC(pi_A*transition_matrix_0_01["A","C"], digits=3, format="f")`$$
+$$Pr_{AC}(v, \kappa, \pi)=\pi_{A}*p_{AC}(v)=`r formatC(pi_A, digits=3, format="f")`*`r formatC(transition_matrix_0_01["A","C"], digits=3, format="f")`=`r formatC(pi_A*transition_matrix_0_01["A","C"], digits=3, format="f")`$$
+$$Pr_{CA}(v, \kappa, \pi)=\pi_{C}*p_{CA}(v)=`r formatC(pi_C, digits=3, format="f")`*`r formatC(transition_matrix_0_01["C","A"], digits=3, format="f")`=`r formatC(pi_C*transition_matrix_0_01["C","A"], digits=3, format="f")`$$
+$$Pr_{AA}(v, \kappa, \pi)=\pi_{A}*p_{AA}(v)=`r formatC(pi_A, digits=3, format="f")`*`r formatC(transition_matrix_0_01["A","A"], digits=3, format="f")`=`r formatC(pi_A*transition_matrix_0_01["A","A"], digits=3, format="f")`$$
 
 ```{r likelihood-10}
-Pr_1 <- pi_A*transition_matrix["A","A"]
-Pr_2 <- pi_T*transition_matrix["T","T"]
-Pr_3 <- pi_G*transition_matrix["G","G"]
-Pr_4 <- pi_A*transition_matrix["A","A"]
-Pr_5 <- pi_C*transition_matrix["C","C"]
-Pr_6 <- pi_A*transition_matrix["A","C"]
-Pr_7 <- pi_A*transition_matrix["A","C"]
-Pr_8 <- pi_A*transition_matrix["A","C"]
-Pr_9 <- pi_C*transition_matrix["A","C"]
-Pr_10 <- pi_A*transition_matrix["A","A"]
+Pr_1 <- pi_A*transition_matrix_0_01["A","A"]
+Pr_2 <- pi_T*transition_matrix_0_01["T","T"]
+Pr_3 <- pi_G*transition_matrix_0_01["G","G"]
+Pr_4 <- pi_A*transition_matrix_0_01["A","A"]
+Pr_5 <- pi_C*transition_matrix_0_01["C","C"]
+Pr_6 <- pi_A*transition_matrix_0_01["A","C"]
+Pr_7 <- pi_A*transition_matrix_0_01["A","C"]
+Pr_8 <- pi_A*transition_matrix_0_01["A","C"]
+Pr_9 <- pi_C*transition_matrix_0_01["A","C"]
+Pr_10 <- pi_A*transition_matrix_0_01["A","A"]
 
 L <- Pr_1*Pr_2*Pr_3*Pr_4*Pr_5*Pr_6*Pr_7*Pr_8*Pr_9*Pr_10
 l <- log(Pr_1)+log(Pr_2)+log(Pr_3)+log(Pr_4)+log(Pr_5)+log(Pr_6)+log(Pr_7)+log(Pr_8)+log(Pr_9)+log(Pr_10)
@@ -451,7 +455,7 @@ $$\ell = \sum_{site = 1}^{N} \ln(Pr_{site}) = `r formatC(l, digits = 3, format =
 
 ```{r likelihood}
 
-log_likelihood_total <- log_likelihood(v, kappa_hat, avg_frequencies, mt_cyb_df)
+log_likelihood_total <- log_likelihood(0.01, kappa_hat, avg_frequencies, mt_cyb_df)
 
 ```
 
@@ -466,31 +470,35 @@ and returns the log-likelihood (using the estimated parameter values) of the seq
 $$\ell = `r formatC(log_likelihood_total, digits = 3, format = "f")`$$
 
 We can now fix all parameters except the transition transversion rate ratio $\kappa$ and look for the
-maximum log-likelihood (Figure \ref{fig:maximum-likelihood}).
+maximum log-likelihood (Figure \ref{fig:maximum-likelihood}) around $\hat{\kappa}$ 
+we estimated.
 
 ```{r maximum-likelihood, warning=FALSE, fig.width=3, fig.height=3, fig.align="center", fig.cap="Log-likelihood curve of the proposed model", fig.pos = "H"}
 
-neg_likelihood <- function(kappa){
-  return(-log_likelihood(v, kappa, avg_frequencies, mt_cyb_df))
+# Helper log-likelihood function which only takes one argument (kappa)
+neg_log_likelihood <- function(kappa){
+  return(-log_likelihood(0.01, kappa, avg_frequencies, mt_cyb_df))
 }
 
-ml <- optim(c("kappa" = 2.1248), neg_likelihood, method = "Brent", lower = 0.5, upper = 3.0)
+ml_list <- optim(c("kappa" = 2.1248), neg_log_likelihood, method = "Brent", lower = 0.5, upper = 3.0)
 
+# To be able to use ggplots stat_function, the function needs to be vectorized
 log_likelihood_vectorized_kappa <- Vectorize(log_likelihood, vectorize.args = "kappa")
 
 ggplot(data.frame(kappa = c(0, 7)), aes(kappa)) +
-  stat_function(fun = log_likelihood_vectorized_kappa, args = list(v = v, pi = avg_frequencies, df = mt_cyb_df)) +
+  stat_function(fun = log_likelihood_vectorized_kappa, args = list(v = 0.01, pi = avg_frequencies, df = mt_cyb_df)) +
   coord_cartesian(xlim = c(0, 6), ylim = c(-3150, -3100)) +
   theme_minimal() +
   labs(x = expression(kappa), y = "log-likelihood")
 
 ```
 
+The estimate of $\hat{\kappa} = `r formatC(kappa_hat, digits = 3, format = "f")`$ 
+is very close to the maximum but there is a transition transversion rate ratio which 
+gives a slightly better likelihood:
 
-There's a transition transversion rate ratio which gives a slightly better likelihood:
-
-$$\hat{\kappa} = `r formatC(ml$par, digits = 3, format = "f")`$$
-$$\ell = `r formatC(-ml$value, digits = 3, format = "f")`$$
+$$\hat{\kappa} = `r formatC(ml_list$par, digits = 3, format = "f")`$$
+$$\ell = `r formatC(-ml_list$value, digits = 3, format = "f")`$$
 
 
 ## Implementing a simulation
@@ -500,6 +508,7 @@ $$\ell = `r formatC(-ml$value, digits = 3, format = "f")`$$
 ```{r simulation}
 set.seed(202001)
 
+# Define the amount and length of alignments which should be simulated
 alignments <- 10
 length <- alignment_length
 
@@ -512,54 +521,32 @@ simulations <-
   mutate(mouse = fct_relevel(mouse, nt_order),
          mouse_index = as.integer(mouse)) %>%
   rowwise() %>%
-  mutate(human = sample(nt_order, size = 1, prob = transition_matrix[mouse_index,])) %>%
+  mutate(human = sample(nt_order, size = 1, prob = transition_matrix_0_01[mouse_index,])) %>%
   ungroup() %>%
   mutate(human = fct_relevel(human, nt_order))
 
+# To be able to use dplyrs mutate, the log-likelihood function needs to be vectorized
 log_likelihood_vectorized_df <- Vectorize(log_likelihood, vectorize.args = "df")
 
 simulations_seqs <-
   simulations %>%
   select(-site, -mouse_index) %>%
   nest(seqs = -alignment) %>%
-  mutate(l = log_likelihood_vectorized_df(v, kappa_hat, avg_frequencies, seqs))
+  mutate(l = log_likelihood_vectorized_df(0.01, kappa_hat, avg_frequencies, seqs))
 ```
 
-
-To simulate two aligned sequences over a distance of $v = `r v`$ and the previously defined substitution rate matrix $Q$ 
-it's assumed that the substitutions happen independantly across sites.  
-`r alignments` pairwise alignments of length `r length` nt were be simulated.
-The log-likelihood of each simulated alignment was computed and the distribution
-is shown in Figure \ref{fig:simulation-plot}.  
-Much higher log-likelihoods compared to what was calculated earlier hints that
-the given distance might not be an accurate assumption (see Discussion).
-
-```{r simulation-plot, message=FALSE, fig.width=3, fig.height=3, fig.align="center", fig.cap="Log-likelihood distribution of simulated sequences", fig.pos = "H"}
-
-simulations_seqs %>%
-  ggplot(aes(l)) +
-  geom_histogram() +
-  theme_minimal() +
-  labs(x = "log-likelihood")
-
-```
-
+To simulate two aligned sequences over a distance of $v = 0.01$ and the previously defined substitution rate matrix $\bm{Q}$ 
+it is assumed that the substitutions happen independantly across sites.  
+`r alignments` pairwise alignments of length `r length` nt were simulated.  
 
 To validate the model, we can compare the probabilities for each of the 16 site patterns with the
 observed frequencies from the simulated alignments (Table \ref{tab:simulation-table}).  
 The calculated values are very close to the observed frequencies which confirmes the model.
 
 ```{r simulation-table, warning=FALSE}
-# simulations %>%
-#   group_by(mouse) %>%
-#   summarise(n = n())
-# 
-# simulations %>%
-#   group_by(human) %>%
-#   summarise(n = n())
 
-transition_matrix_df <-
-  as_tibble(transition_matrix) %>%
+transition_matrix_0_01_df <-
+  as_tibble(transition_matrix_0_01) %>%
   bind_cols(mouse = nt_order) %>%
   pivot_longer(cols = c(T, C, A, G), names_to = "human", values_to = "transition_probability")
 
@@ -573,7 +560,7 @@ pattern_sim <-
          human = fct_relevel(substr(pattern, 2, 2), nt_order),
          mouse_index = as.integer(mouse),
          human_index = as.integer(human)) %>%
-  full_join(transition_matrix_df, by = c("mouse", "human")) %>%
+  full_join(transition_matrix_0_01_df, by = c("mouse", "human")) %>%
   mutate(probability = avg_frequencies[mouse_index] * transition_probability) %>%
   select(pattern, frequency, probability)
 
@@ -583,26 +570,46 @@ pattern_sim %>%
 
 ```
 
+The log-likelihood of each simulated alignment was computed and the distribution
+is shown in Figure \ref{fig:simulation-plot}.  
+Much higher log-likelihoods compared to what was calculated earlier hints that
+the given distance might not be an accurate assumption for the sequence alignment 
+provided (see Discussion).
+
+```{r simulation-plot, message=FALSE, fig.width=3, fig.height=3, fig.align="center", fig.cap="Log-likelihood distribution of simulated sequences", fig.pos = "H"}
+
+simulations_seqs %>%
+  ggplot(aes(l)) +
+  geom_histogram() +
+  theme_minimal() +
+  labs(x = "log-likelihood")
+
+```
+
 
 ## Discussion
 
-It's unclear if the (requested) applied model is a good choice for this example. The transition transversion bias of the given sequence alignment is not very strong. Furthermore more complex models usually require more data to infer the parameter and are more prone to overfitting.  
+It's unclear if the applied model is a good choice for this example. The transition transversion bias of the given sequence alignment is not very strong. Furthermore more complex models usually require more data to infer the parameter and are more prone to overfitting.  
+One should be careful when comparing log-likelihoods under different models 
+with different numbers of free parameters. Log-likelihoods tend to be higher 
+using a model with more parameters.  
 
-The evolutionary distance given ($v = 0.01$) is much lower compared to the estimated distance $\hat{v}$ (Appendix).  
-This therefore influences the probabilities of the transition matrix. 
-Changing that distance results in a better likelihood as next section proves.
+The evolutionary distance given ($v = 0.01$) is much lower compared to the estimated distances $\hat{v}$ (Appendix).  
+Changing the given distance results in a better likelihood as next section proves.
 
 ```{r maximum-likelihood-two-parameter}
 
-neg_likelihood_two_parameter <- function(x){
+neg_log_likelihood_two_parameter <- function(x){
   return(-log_likelihood(x["v"], x["kappa"], avg_frequencies, mt_cyb_df))
 }
 
-ml_two_parameter <- optim(c("v" = v, "kappa" = kappa_hat), neg_likelihood_two_parameter)
+ml_two_parameter <- optim(c("v" = 0.01, "kappa" = kappa_hat), neg_log_likelihood_two_parameter)
 ```
 
-If we look for the optimum (maximum likelihood) of a combination of the two parameters $v$ and $\kappa$ we get following results:
+If we look for the optimum (maximum likelihood) of a combination of the two parameters $v$ and $\kappa$ we get following results: 
+
 $$\hat{v} = `r formatC(ml_two_parameter$par[["v"]], digits = 3, format = "f")`$$
+
 $$\hat{\kappa} = `r formatC(ml_two_parameter$par[["kappa"]], digits = 3, format = "f")`$$
 
 with a log-likelihood of $\ell = `r formatC(-ml_two_parameter$value, digits = 3, format = "f")`$ 
@@ -610,8 +617,8 @@ which is higher than the previously calculated maximum likelihood.
 
 ## Appendix
 
-As mentioned above, there exist many different established Markov models of nucleotide substitution. 
-In Table \ref{tab:different-estimates} are the results using the given alignment under different models 
+As mentioned, there exist many different established Markov models of nucleotide substitution. 
+Table \ref{tab:different-estimates} lists estimates using the given alignment under different models 
 (JC69 [@jukes1969evolution], K80 [@Kimura1980], F81 [@Felsenstein1981], HKY85 [@Hasegawa1985]).
 The results were computed using either formulae 
 where possible [@doi:10.1093/acprof:oso/9780199602605.001.0001; @McGuire] or maximum likelihood [@doi:10.1093/acprof:oso/9780199602605.001.0001].
@@ -649,11 +656,11 @@ $V$ & transversional differences (frequencies) \\
 $\kappa$ & transition transversion rate ratio \\
 $\alpha$ & transition rate \\
 $\beta$ & transversion rate \\
-$Q$ & substitution rate matrix \\
+$\bm{Q}$ & substitution rate matrix \\
 $q_{ij}$ & substitution rate from nucleotide i to j \\
 $q_{ii}$ & diagonal element of substitution rate matrix ($i = j$) \\
 $\mu$ & rescaling factor \\
-$P$ & transition probability matrix \\
+$\bm{P}$ & transition probability matrix \\
 $v$ & evolutionary distance (expected substitutions per site) \\
 $L$ & likelihood \\
 $\ell$ & log-likelihood ($\log_e$) \\
