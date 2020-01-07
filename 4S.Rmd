@@ -287,17 +287,25 @@ l_K80 <- -K80_ml_list$value
 # distance formulae to estimate parameters under the F81 model
 v_hat_F81 <- -(1-sum(avg_frequencies^2))*log(1-(S+V)/(1-sum(avg_frequencies^2)))
 
+# maximum likelihood estimate under the F81 model
+
+
 
 # HKY85 ------------------------------------------------------------------------
 # maximum likelihood estimate under the HKY85 model
-#TODO fix so pi can be estimated
 neg_l_HKY85 <-
   function(x){
-    l_HKY85 <- log_likelihood(x["v"], x["kappa"], c(x["pi_T"], x["pi_C"], x["pi_A"], x["pi_G"]), mt_cyb_df)
+    l_HKY85 <- log_likelihood(x["v"], x["kappa"], c(x["pi_T"], x["pi_C"], x["pi_A"], 1-x["pi_T"]-x["pi_C"]-x["pi_A"]), mt_cyb_df)
     return(-l_HKY85)
   }
 
-HKY85_ml_list <- optim(c("v" = 0.01, "kappa" = kappa_hat, "pi_T" = 1/4, "pi_C" = 1/4, "pi_A" = 1/4, "pi_G" = 1/4), neg_l_HKY85)
+HKY85_ml_list <- optim(c("v" = 0.01, "kappa" = kappa_hat, "pi_T" = 1/4, "pi_C" = 1/4, "pi_A" = 1/4), neg_l_HKY85)
+
+v_hat_HKY85_ml <- HKY85_ml_list$par[["v"]]
+kappa_hat_HKY85_ml <- HKY85_ml_list$par[["kappa"]]
+pi_hat_HKY85_ml_incomplete <- c(HKY85_ml_list$par[["pi_T"]], HKY85_ml_list$par[["pi_C"]], HKY85_ml_list$par[["pi_A"]])
+pi_hat_HKY85_ml <- c(pi_hat_HKY85_ml_incomplete, 1-sum(pi_hat_HKY85_ml_incomplete))
+l_HKY85 <- -HKY85_ml_list$value
 
 ```
 
@@ -481,7 +489,7 @@ $$\ell = `r formatC(-ml$value, digits = 3, format = "f")`$$
 ```{r simulation}
 set.seed(202001)
 
-alignments <- 1000
+alignments <- 10
 length <- alignment_length
 
 simulations <-
@@ -516,7 +524,6 @@ Much higher log-likelihoods compared to what was calculated earlier hints that
 the given distance might not be an accurate assumption (see Discussion).
 
 ```{r simulation-plot, message=FALSE, fig.width=3, fig.height=3, fig.align="center", fig.cap="Log-likelihood distribution of simulated sequences", fig.pos = "H"}
-
 
 simulations_seqs %>%
   ggplot(aes(l)) +
@@ -603,16 +610,18 @@ where possible [@doi:10.1093/acprof:oso/9780199602605.001.0001; @McGuire] or max
 \caption{\label{tab:different-estimates}Comparing estimates using different models.}
 \begin{tabular}{lllll}
 \toprule
-Model and method & $\hat{v}$ & $\hat{\kappa}$ & $\hat{\pi}$ & $\ell$ \\\midrule
+Model and method & $\hat{v}$ & $\hat{\kappa}$ & $(\hat{\pi}_{T}, \hat{\pi}_{C}, \hat{\pi}_{A}, \hat{\pi}_{G})$ & $\ell$ \\
+\midrule
 Formulae \\
 JC69 & `r formatC(v_hat_JC69, digits = 4, format = "f")` \\
 K80 & `r formatC(v_hat_K80, digits = 4, format = "f")` & `r formatC(kappa_hat_K80, digits = 4, format = "f")` \\
 F81 & `r formatC(v_hat_F81, digits = 4, format = "f")` \\
+\midrule
 Maximum likelihood \\
 JC69 & `r formatC(v_hat_JC69_ml, digits = 4, format = "f")` & & & `r formatC(l_JC69, digits = 2, format = "f")` \\
 K80 & `r formatC(v_hat_K80_ml, digits = 4, format = "f")` & `r formatC(kappa_hat_K80_ml, digits = 4, format = "f")` & & `r formatC(l_K80, digits = 2, format = "f")`\\
 F81 \\
-HKY85 \\
+HKY85 & `r formatC(v_hat_HKY85_ml, digits = 4, format = "f")` & `r formatC(kappa_hat_HKY85_ml, digits = 4, format = "f")` & (`r formatC(pi_hat_HKY85_ml, digits = 4, format = "f")`) & `r formatC(l_HKY85, digits = 2, format = "f")` \\
 \bottomrule
 \end{tabular}
 \end{table}
