@@ -12,6 +12,7 @@ output: pdf_document
 header-includes:
   - \usepackage{tikz}
   - \usepackage{bm}
+  - \usepackage{hologo}
 ---
 
 ```{r setup, include=FALSE}
@@ -473,7 +474,7 @@ We can now fix all parameters except the transition transversion rate ratio $\ka
 maximum log-likelihood (Figure \ref{fig:maximum-likelihood}) around $\hat{\kappa}$ 
 we estimated.
 
-```{r maximum-likelihood, warning=FALSE, fig.width=3, fig.height=3, fig.align="center", fig.cap="Log-likelihood curve of the proposed model", fig.pos = "H"}
+```{r maximum-likelihood, warning=FALSE, fig.width=3.5, fig.height=2.5, fig.align="center", fig.cap="Log-likelihood curve of the proposed model", fig.pos = "H"}
 
 # Helper log-likelihood function which only takes one argument (kappa)
 neg_log_likelihood <- function(kappa){
@@ -509,7 +510,7 @@ $$\ell = `r formatC(-ml_list$value, digits = 3, format = "f")`$$
 set.seed(202001)
 
 # Define the amount and length of alignments which should be simulated
-alignments <- 10
+alignments <- 1000
 length <- alignment_length
 
 simulations <-
@@ -576,7 +577,7 @@ Much higher log-likelihoods compared to what was calculated earlier hints that
 the given distance might not be an accurate assumption for the sequence alignment 
 provided (see Discussion).
 
-```{r simulation-plot, message=FALSE, fig.width=3, fig.height=3, fig.align="center", fig.cap="Log-likelihood distribution of simulated sequences", fig.pos = "H"}
+```{r simulation-plot, message=FALSE, fig.width=3.5, fig.height=2.5, fig.align="center", fig.cap="Log-likelihood distribution of simulated sequences", fig.pos = "H"}
 
 simulations_seqs %>%
   ggplot(aes(l)) +
@@ -609,7 +610,6 @@ ml_two_parameter <- optim(c("v" = 0.01, "kappa" = kappa_hat), neg_log_likelihood
 If we look for the optimum (maximum likelihood) of a combination of the two parameters $v$ and $\kappa$ we get following results: 
 
 $$\hat{v} = `r formatC(ml_two_parameter$par[["v"]], digits = 3, format = "f")`$$
-
 $$\hat{\kappa} = `r formatC(ml_two_parameter$par[["kappa"]], digits = 3, format = "f")`$$
 
 with a log-likelihood of $\ell = `r formatC(-ml_two_parameter$value, digits = 3, format = "f")`$ 
@@ -625,7 +625,7 @@ where possible [@doi:10.1093/acprof:oso/9780199602605.001.0001; @McGuire] or max
 
 \begin{table}[h]
 \centering
-\caption{\label{tab:different-estimates}Comparing estimates using different models.}
+\caption{\label{tab:different-estimates}Comparing estimates using different models}
 \begin{tabular}{lllll}
 \toprule
 Model and method & $\hat{v}$ & $\hat{\kappa}$ & $(\hat{\pi}_{T}, \hat{\pi}_{C}, \hat{\pi}_{A}, \hat{\pi}_{G})$ & $\ell$ \\
@@ -644,8 +644,21 @@ HKY85 & `r formatC(v_hat_HKY85_ml, digits = 4, format = "f")` & `r formatC(kappa
 \end{tabular}
 \end{table}
 
+
 ## Disclosure
-TODO: Mention the help I got. (Teja, optim with two parameter)
+Statistics were done using `R` [@R] (3.6.1) and the following packages:  
+
+- `tidyverse` [@tidyverse] (1.3.0)
+- `seqinr` [@seqinr] (3.6-1)
+- `knitr` [@knitr] (1.26)
+- `kableExtra` [@kableExtra] (1.1.0)
+- `expm` [@expm] (0.999-4)
+
+
+I'd like to thank Teja Turk for helping me apply `stats::optim()` with multiple 
+parameters to be optimized over, showing me \hologo{LaTeX} tricks and for providing 
+moral support.
+
 
 ## Notation
 
@@ -669,7 +682,4 @@ $p_{ij}$ & probability of substition of nucleotide i to j \\
 \end{tabular}
 
 
-
-
 ## References
-TODO: cite R and packages
