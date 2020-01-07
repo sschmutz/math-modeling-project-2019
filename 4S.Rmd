@@ -184,6 +184,30 @@ nt_comparisons <-
   summarize(count = n(),
             frequency = count / alignment_length)
 
+nt_comparisons <-
+  tribble(
+    ~mouse, ~human, ~count,
+    "T", "T", 179,
+    "T", "C", 23,
+    "T", "A", 1,
+    "T", "G", 0,
+    "C", "T", 30,
+    "C", "C", 219,
+    "C", "A", 2,
+    "C", "G", 0,
+    "A", "T", 2,
+    "A", "C", 1,
+    "A", "A", 291,
+    "A", "G", 10,
+    "G", "T", 0,
+    "G", "C", 0,
+    "G", "A", 21,
+    "G", "G", 169
+    ) %>%
+  mutate(frequency = count / alignment_length,
+         mouse = fct_relevel(mouse, nt_order),
+         human = fct_relevel(human, nt_order))
+
 nt_comparisons_matrix <-
   matrix(nt_comparisons$frequency, nrow = 4, byrow = TRUE, dimnames = list(nt_order, nt_order))
 
@@ -276,7 +300,7 @@ neg_l_K80 <-
     return(-l_K80)
   }
 
-K80_ml_list <- optim(c("v" = 0.01, "kappa" = kappa_hat), neg_l_K80)
+K80_ml_list <- optim(c("v" = 0.1, "kappa" = 35), neg_l_K80)
 
 v_hat_K80_ml <- K80_ml_list$par[["v"]]
 kappa_hat_K80_ml <- K80_ml_list$par[["kappa"]]
@@ -294,7 +318,7 @@ neg_l_F81 <-
     return(-l_F81)
   }
 
-F81_ml_list <- optim(c("v" = 0.01, "pi_T" = 1/4, "pi_C" = 1/4, "pi_A" = 1/4), neg_l_F81)
+F81_ml_list <- optim(c("v" = 0.1, "pi_T" = 1/4, "pi_C" = 1/4, "pi_A" = 1/4), neg_l_F81)
 
 v_hat_F81_ml <- F81_ml_list$par[["v"]]
 pi_hat_F81_ml_incomplete <- c(F81_ml_list$par[["pi_T"]], F81_ml_list$par[["pi_C"]], F81_ml_list$par[["pi_A"]])
@@ -310,7 +334,7 @@ neg_l_HKY85 <-
     return(-l_HKY85)
   }
 
-HKY85_ml_list <- optim(c("v" = 0.01, "kappa" = kappa_hat, "pi_T" = 1/4, "pi_C" = 1/4, "pi_A" = 1/4), neg_l_HKY85)
+HKY85_ml_list <- optim(c("v" = 0.1, "kappa" = kappa_hat, "pi_T" = 1/4, "pi_C" = 1/4, "pi_A" = 1/4), neg_l_HKY85)
 
 v_hat_HKY85_ml <- HKY85_ml_list$par[["v"]]
 kappa_hat_HKY85_ml <- HKY85_ml_list$par[["kappa"]]
