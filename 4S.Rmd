@@ -569,12 +569,10 @@ pattern_sim %>%
 ## Discussion
 
 It's unclear if the (requested) applied model is a good choice for this example. The transition transversion bias of the given sequence alignment is not very strong. Furthermore more complex models usually require more data to infer the parameter and are more prone to overfitting.  
-The evolutionary distance given ($v = 0.01$) is much lower compared to the estimated distance $\hat{v}$ based on the K80 model [@Kimura1980]:
 
-$$\hat{v} = -\frac{1}{2}\ln(1-2S-V)-\frac{1}{4}\ln(1-2V) = `r round(v_hat_K80, digits = 3)`$$
-
-This therefore influences the probabilities of the transition matrix. Changing that distance results in a better likelihood
-as next section proves.
+The evolutionary distance given ($v = 0.01$) is much lower compared to the estimated distance $\hat{v}$ (Appendix).  
+This therefore influences the probabilities of the transition matrix. 
+Changing that distance results in a better likelihood as next section proves.
 
 ```{r maximum-likelihood-two-parameter}
 
