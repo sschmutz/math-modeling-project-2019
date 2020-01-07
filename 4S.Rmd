@@ -481,7 +481,7 @@ $$\ell = `r formatC(-ml$value, digits = 3, format = "f")`$$
 ```{r simulation}
 set.seed(202001)
 
-alignments <- 10
+alignments <- 1000
 length <- alignment_length
 
 simulations <-
@@ -560,7 +560,7 @@ pattern_sim <-
   select(pattern, frequency, probability)
 
 pattern_sim %>%
-  kable(caption = "Pattern frequencies and probabilities", booktabs = TRUE, digits = 3, linesep = "", longtable = TRUE) %>%
+  kable(caption = "Pattern frequencies and probabilities", booktabs = TRUE, digits = 4, linesep = "", longtable = TRUE) %>%
   kable_styling(full_width = F, latex_options = c("repeat_header"))
 
 ```
