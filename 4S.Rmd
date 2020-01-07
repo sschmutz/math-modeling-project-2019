@@ -165,19 +165,36 @@ V <-
   pull(count) %>%
   sum() / alignment_length
 
-# use distance formulae to estimate parameters under the K80 model
-v_hat_K80 <- -1/2*log(1-2*S-V)-1/4*log(1-2*V)
-kappa_hat_K80 <- 2*log(1-2*S-V)/log(1-2*V)-1
+kappa_hat <- (S/4)/(V/8)
 
 ```
 
 The fraction of sites with transitional differences ($S = `r round(S, digits = 3)`$)
 and transversional differences ($V = `r round(V, digits = 3)`$) can be estimated
 by taking the sum of the corresponding fields from Table \ref{tab:nucleotide-comparisons}.  
-There are different definitions of the transition transversion rate ratio. [@doi:10.1093/acprof:oso/9780199602605.001.0001]
-It was decided to apply the measure used by Kimura [@Kimura1980] and Hasegawa et al. [@Hasegawa1985] ($\kappa=\alpha/\beta$).
-The estimate of transition transversion rate ratio ($\hat{\kappa}$) can be calculated as follows [@doi:10.1093/acprof:oso/9780199602605.001.0001]:  
-$$\hat{\kappa} = \frac{2\ln(1-2S-V)}{\ln(1-2V)}-1 = `r round(kappa_hat_K80, digits = 3)`$$ 
+There are different definitions of the transition transversion rate ratio. [@doi:10.1093/acprof:oso/9780199602605.001.0001]  
+A simple way to estimate the transition transversion rate ratio ($\hat{\kappa}$) 
+is to divide the mean transitional differences by the mean transversional differences:
+
+$$\hat{\kappa} = \frac{S/4}{V/8} = `r formatC(kappa_hat, digits = 3, format = "f")`$$
+
+If $\kappa = 1$ this means that there's no difference in transition and transversion substitutions (no bias). 
+We see that our $\hat{\kappa}$ is slightly above $1$ which indicates a bias towards transitions.
+
+```{r different-estimates}
+# distance formulae to estimate parameters under the JC69 model
+differences <-
+  nt_comparisons %>%
+  filter(mouse != human) %>%
+  pull(count) %>%
+  sum()
+
+v_hat_JC69 <- -3/4*log(1-4/3*differences/alignment_length)
+
+# distance formulae to estimate parameters under the K80 model
+v_hat_K80 <- -1/2*log(1-2*S-V)-1/4*log(1-2*V)
+kappa_hat_K80 <- 2*log(1-2*S-V)/log(1-2*V)-1
+```
 
 ### Substitution rate matrix
 The substitution rate matrix $Q$ of the HKY85 model [@Hasegawa1985] is defined as follows (rows and columns are ordered $`r nt_order`$):  
@@ -193,7 +210,7 @@ Q=\{q_{ij}\}=
 $$
 
 The diagonal of $Q$ is defined by the requirement that each row of a substitution rate matrix must sum to 0.  
-Using the steady-state distribution $\pi$ and transition transversion rate ratio $\kappa$ calculated above, we can fill in the rate matrix (without considering $\mu$ yet):
+Using the steady-state distribution $\pi$ and transition transversion rate ratio $\kappa$ estimated above, we can fill in the rate matrix (without considering $\mu$ yet):
 
 ```{r rate-matrix}
 pi_T <- avg_frequencies[1]
@@ -204,10 +221,10 @@ pi_G <- avg_frequencies[4]
 rate_matrix <-
   frame_matrix(
     ~T, ~C, ~A, ~G,
-    0-kappa_hat_K80*pi_C-pi_A-pi_G, kappa_hat_K80*pi_C, pi_A, pi_G,
-    kappa_hat_K80*pi_T, 0-kappa_hat_K80*pi_T-pi_A-pi_G, pi_A, pi_G,
-    pi_T, pi_C, 0-pi_T-pi_C-kappa_hat_K80*pi_G, kappa_hat_K80*pi_G,
-    pi_T, pi_C, kappa_hat_K80*pi_A, 0-pi_T-pi_C-kappa_hat_K80*pi_A
+    0-kappa_hat*pi_C-pi_A-pi_G, kappa_hat*pi_C, pi_A, pi_G,
+    kappa_hat*pi_T, 0-kappa_hat*pi_T-pi_A-pi_G, pi_A, pi_G,
+    pi_T, pi_C, 0-pi_T-pi_C-kappa_hat*pi_G, kappa_hat*pi_G,
+    pi_T, pi_C, kappa_hat*pi_A, 0-pi_T-pi_C-kappa_hat*pi_A
   )
 ```
 
@@ -361,7 +378,7 @@ log_likelihood <- function(v, kappa, pi, df){
   
 }
 
-log_likelihood_total <- log_likelihood(v, kappa_hat_K80, avg_frequencies, mt_cyb_df)
+log_likelihood_total <- log_likelihood(v, kappa_hat, avg_frequencies, mt_cyb_df)
 ```
 
 The function `log_likelihood` was written, which takes following arguments:  
@@ -432,7 +449,7 @@ simulations_seqs <-
   simulations %>%
   select(-site, -mouse_index) %>%
   nest(seqs = -alignment) %>%
-  mutate(l = log_likelihood_vectorized_df(v, kappa_hat_K80, avg_frequencies, seqs))
+  mutate(l = log_likelihood_vectorized_df(v, kappa_hat, avg_frequencies, seqs))
 ```
 
 
@@ -511,7 +528,7 @@ neg_likelihood_two_parameter <- function(x){
   return(-log_likelihood(x["v"], x["kappa"], avg_frequencies, mt_cyb_df))
 }
 
-ml_two_parameter <- optim(c("v" = v, "kappa" = kappa_hat_K80), neg_likelihood_two_parameter)
+ml_two_parameter <- optim(c("v" = v, "kappa" = kappa_hat), neg_likelihood_two_parameter)
 ```
 
 If we look for the optimum (maximum likelihood) of a combination of the two parameters $v$ and $\kappa$ we get following results:
@@ -522,6 +539,10 @@ with a log-likelihood of $\ell = `r formatC(-ml_two_parameter$value, digits = 3,
 which is higher than the previously calculated maximum likelihood.
 
 ## Appendix
+
+
+The estimate of transition transversion rate ratio ($\hat{\kappa}$) can be calculated as follows [@doi:10.1093/acprof:oso/9780199602605.001.0001]:  
+$$\hat{\kappa} = \frac{2\ln(1-2S-V)}{\ln(1-2V)}-1 = `r round(kappa_hat_K80, digits = 3)`$$ 
 
 ## Disclosure
 TODO: Mention the help I got. (Teja, optim with two parameter)
