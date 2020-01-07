@@ -40,6 +40,60 @@ write_matex <- function(x) {
 
 ```
 
+```{r likelihood-function}
+
+log_likelihood <- function(v, kappa, pi, df){
+  
+  # get nucleotide steady-state frequencies from the vector provided
+  # order is important (T, C, A, G)
+  pi_T <- pi[1]
+  pi_C <- pi[2]
+  pi_A <- pi[3]
+  pi_G <- pi[4]
+
+  # compute the rate matrix without considering mu first
+  rate_matrix <-
+    frame_matrix(
+      ~T, ~C, ~A, ~G,
+      0-kappa*pi_C-pi_A-pi_G, kappa*pi_C, pi_A, pi_G,
+      kappa*pi_T, 0-kappa*pi_T-pi_A-pi_G, pi_A, pi_G,
+      pi_T, pi_C, 0-pi_T-pi_C-kappa*pi_G, kappa*pi_G,
+      pi_T, pi_C, kappa*pi_A, 0-pi_T-pi_C-kappa*pi_A
+    )
+  
+  # calculate mu and update the rate matrix
+  mu <- -1/(pi_T*rate_matrix[[1,1]] + pi_C*rate_matrix[[2,2]] + pi_A*rate_matrix[[3,3]] + pi_G*rate_matrix[[4,4]])
+  rate_matrix <- rate_matrix*mu
+  
+  # use described formula and matrix exponentiation to compute the transition matrix
+  transition_matrix <- expm(rate_matrix*v)
+  
+  # reformat transition matrix so it can be used in the next step
+  transition_matrix_df <-
+    as_tibble(transition_matrix) %>%
+    bind_cols(mouse = nt_order) %>%
+    pivot_longer(cols = c(T, C, A, G), names_to = "human", values_to = "transition_probability")
+  
+  df_prob <-
+    df %>%
+    mutate(mouse = as.character(mouse),
+           human = as.character(human)) %>%
+    full_join(transition_matrix_df, by = c("mouse", "human")) %>%
+    mutate(pi =
+             case_when(
+               mouse == "T" ~ pi_T,
+               mouse == "C" ~ pi_C,
+               mouse == "A" ~ pi_A,
+               mouse == "G" ~ pi_G)
+           ) %>%
+    mutate(prob = pi * transition_probability,
+           prob_log = log(prob))
+  
+  return(sum(df_prob$prob_log))
+}
+
+```
+
 ```{r read-fasta}
 
 # this order of nucleotides will always be used
@@ -182,6 +236,8 @@ If $\kappa = 1$ this means that there's no difference in transition and transver
 We see that our $\hat{\kappa}$ is slightly above $1$ which indicates a bias towards transitions.
 
 ```{r different-estimates}
+
+# JC69 -------------------------------------------------------------------------
 # distance formulae to estimate parameters under the JC69 model
 differences <-
   nt_comparisons %>%
@@ -191,9 +247,58 @@ differences <-
 
 v_hat_JC69 <- -3/4*log(1-4/3*differences/alignment_length)
 
+# maximum likelihood estimate under the JC69 model
+neg_l_JC69 <-
+  function(v){
+    l_JC69 <- differences* log(1/16-1/16*exp(-4*v/3))+(alignment_length-differences)*log(1/16+3/16*exp(-4*v/3))
+    return(-l_JC69)
+  }
+
+JC69_ml_list <- optimize(neg_l_JC69, interval = c(0.001, 1))
+
+v_hat_JC69_ml <- JC69_ml_list$minimum
+l_JC69 <- -JC69_ml_list$objective
+
+
+# K80 --------------------------------------------------------------------------
 # distance formulae to estimate parameters under the K80 model
 v_hat_K80 <- -1/2*log(1-2*S-V)-1/4*log(1-2*V)
 kappa_hat_K80 <- 2*log(1-2*S-V)/log(1-2*V)-1
+
+p0_K80 <- 1/4+1/4*exp((-4*v_hat_K80)/(kappa_hat_K80+2))+1/2*exp((-2*v_hat_K80*(kappa_hat_K80+1))/(kappa_hat_K80+2))
+p1_K80 <- 1/4+1/4*exp((-4*v_hat_K80)/(kappa_hat_K80+2))-1/2*exp((-2*v_hat_K80*(kappa_hat_K80+1))/(kappa_hat_K80+2))
+p2_K80 <- 1/4-1/4*exp((-4*v_hat_K80)/(kappa_hat_K80+2))
+
+# maximum likelihood estimate under the K80 model
+neg_l_K80 <-
+  function(x){
+    l_K80 <- log_likelihood(x["v"], x["kappa"], c(1/4, 1/4, 1/4, 1/4), mt_cyb_df)
+    return(-l_K80)
+  }
+
+K80_ml_list <- optim(c("v" = 0.01, "kappa" = kappa_hat), neg_l_K80)
+
+v_hat_K80_ml <- K80_ml_list$par[["v"]]
+kappa_hat_K80_ml <- K80_ml_list$par[["kappa"]]
+l_K80 <- -K80_ml_list$value
+
+
+# F81 --------------------------------------------------------------------------
+# distance formulae to estimate parameters under the F81 model
+v_hat_F81 <- -(1-sum(avg_frequencies^2))*log(1-(S+V)/(1-sum(avg_frequencies^2)))
+
+
+# HKY85 ------------------------------------------------------------------------
+# maximum likelihood estimate under the HKY85 model
+#TODO fix so pi can be estimated
+neg_l_HKY85 <-
+  function(x){
+    l_HKY85 <- log_likelihood(x["v"], x["kappa"], c(x["pi_T"], x["pi_C"], x["pi_A"], x["pi_G"]), mt_cyb_df)
+    return(-l_HKY85)
+  }
+
+HKY85_ml_list <- optim(c("v" = 0.01, "kappa" = kappa_hat, "pi_T" = 1/4, "pi_C" = 1/4, "pi_A" = 1/4, "pi_G" = 1/4), neg_l_HKY85)
+
 ```
 
 ### Substitution rate matrix
@@ -325,60 +430,10 @@ $$\ell = \sum_{site = 1}^{N} \ln(Pr_{site}) = `r formatC(l, digits = 3, format =
 
 > Write a program to compute the likelihood function of the whole alignment for the same genetic distance. Compute the likelihood for the whole alignment for several values of transition-transversion ratio around the value you estimated. Can you find a value that gives a better likelihood?
 
-```{r likelihood-function}
-
-log_likelihood <- function(v, kappa, pi, df){
-  
-  # get nucleotide steady-state frequencies from the vector provided
-  # order is important (T, C, A, G)
-  pi_T <- pi[1]
-  pi_C <- pi[2]
-  pi_A <- pi[3]
-  pi_G <- pi[4]
-
-  # compute the rate matrix without considering mu first
-  rate_matrix <-
-    frame_matrix(
-      ~T, ~C, ~A, ~G,
-      0-kappa*pi_C-pi_A-pi_G, kappa*pi_C, pi_A, pi_G,
-      kappa*pi_T, 0-kappa*pi_T-pi_A-pi_G, pi_A, pi_G,
-      pi_T, pi_C, 0-pi_T-pi_C-kappa*pi_G, kappa*pi_G,
-      pi_T, pi_C, kappa*pi_A, 0-pi_T-pi_C-kappa*pi_A
-    )
-  
-  # calculate mu and update the rate matrix
-  mu <- -1/(pi_T*rate_matrix[[1,1]] + pi_C*rate_matrix[[2,2]] + pi_A*rate_matrix[[3,3]] + pi_G*rate_matrix[[4,4]])
-  rate_matrix <- rate_matrix*mu
-  
-  # use described formula and matrix exponentiation to compute the transition matrix
-  transition_matrix <- expm(rate_matrix*v)
-  
-  # reformat transition matrix so it can be used in the next step
-  transition_matrix_df <-
-    as_tibble(transition_matrix) %>%
-    bind_cols(mouse = nt_order) %>%
-    pivot_longer(cols = c(T, C, A, G), names_to = "human", values_to = "transition_probability")
-  
-  df_prob <-
-    df %>%
-    mutate(mouse = as.character(mouse),
-           human = as.character(human)) %>%
-    full_join(transition_matrix_df, by = c("mouse", "human")) %>%
-    mutate(pi =
-             case_when(
-               mouse == "T" ~ pi_T,
-               mouse == "C" ~ pi_C,
-               mouse == "A" ~ pi_A,
-               mouse == "G" ~ pi_G)
-           ) %>%
-    mutate(prob = pi * transition_probability,
-           prob_log = log(prob))
-  
-  return(sum(df_prob$prob_log))
-  
-}
+```{r likelihood}
 
 log_likelihood_total <- log_likelihood(v, kappa_hat, avg_frequencies, mt_cyb_df)
+
 ```
 
 The function `log_likelihood` was written, which takes following arguments:  
@@ -540,9 +595,20 @@ which is higher than the previously calculated maximum likelihood.
 
 ## Appendix
 
-
-The estimate of transition transversion rate ratio ($\hat{\kappa}$) can be calculated as follows [@doi:10.1093/acprof:oso/9780199602605.001.0001]:  
-$$\hat{\kappa} = \frac{2\ln(1-2S-V)}{\ln(1-2V)}-1 = `r round(kappa_hat_K80, digits = 3)`$$ 
+\begin{tabular}{lllll}
+\toprule
+Model and method & $\hat{v}$ & $\hat{\kappa}$ & $\hat{\pi}$ & $\ell$ \\\midrule
+Distance formulae \\
+JC69 & `r formatC(v_hat_JC69, digits = 4, format = "f")` \\
+K80 & `r formatC(v_hat_K80, digits = 4, format = "f")` & `r formatC(kappa_hat_K80, digits = 4, format = "f")` \\
+F81 & `r formatC(v_hat_F81, digits = 4, format = "f")` \\
+Maximum likelihood \\
+JC69 & `r formatC(v_hat_JC69_ml, digits = 4, format = "f")` & & & `r formatC(l_JC69, digits = 2, format = "f")` \\
+K80 & `r formatC(v_hat_K80_ml, digits = 4, format = "f")` & `r formatC(kappa_hat_K80_ml, digits = 4, format = "f")` & & `r formatC(l_K80, digits = 2, format = "f")`\\
+F81 \\
+HKY85 \\
+\bottomrule
+\end{tabular}
 
 ## Disclosure
 TODO: Mention the help I got. (Teja, optim with two parameter)
