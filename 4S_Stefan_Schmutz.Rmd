@@ -16,6 +16,7 @@ header-includes:
 ---
 
 ```{r setup, include=FALSE}
+
 # set option to not include R code in the output file
 knitr::opts_chunk$set(echo = FALSE)
 
@@ -113,15 +114,15 @@ mt_cyb_df <-
 
 ## Introduction
 DNA, the molecule essential for known life, consists of four building blocks. 
-Those blocks (thymine (T), cytosine (C), adenine (A), guanine (G)) are called nucleotides. [@wiki:DNA]  
+Those blocks (thymine (T), cytosine (C), adenine (A) and guanine (G)) are called nucleotides. [@wiki:DNA]  
 Since DNA evolves over time, substitutions (change of nucleotides) occur. 
 For structural reasons, transitions (substitutions between A and G or T and C) 
 are more likely to happen compared to transversions (all other substitutions)
 in the majority of the cases [@10.1371/journal.pgen.0030022].
 
 The aim of this work is to describe a Markov model of nucleotide substitution 
-over time which consideres nucleotide- and transition/transversion-bias.  
-The four nucleotides of DNA represent the four states of the Markov model.  
+over time which considers nucleotide- and transition/transversion-bias.  
+The four nucleotides of DNA represent the four states of the Markov model. 
 Other parameters needed for the model are the steady-state distribution ($\pi$) and 
 state transition probabilities ($\bm{P}$). Those parameters will be estimated in the next section 
 and are based on a pairwise sequence alignment of human and mouse cytochrome b (MT-CYB) 
@@ -135,7 +136,7 @@ There are several different Markov models of nucleotide substitution described i
 
 > Estimate nucleotide frequencies from the pairwise alignment of human and mouse cytochrome b gene as given in the file “mt-cyb-human-mouse_cDNAalignment.fasta”. Use these values to parameterize the model.
 
-A way to estimate the nucleotide frequencies is to count the occurences and
+A way to estimate the nucleotide frequencies is to count the occurrences and
 divide them by the total length.  
 Since we're working with a pairwise alignment without indels, the total length
 of both sequences is the same (`r length(mt_cyb$HOMOSAPIENSCYTB)` nt). 
@@ -169,13 +170,13 @@ nt_frequencies %>%
 ```
 
 We assume that the mean of this distribution is the steady-state distribution $\pi$. 
-As $v \to \infty$ the equation $\pi\bm{P}(v)=\pi$ is true [@doi:10.1093/acprof:oso/9780199602605.001.0001].
+As $v \to \infty$ the equation $\pi\bm{P}(v)=\pi$ holds true [@doi:10.1093/acprof:oso/9780199602605.001.0001].
 
-$$\pi = (\pi_{T}, \pi_{C}, \pi_{A}, \pi_{G}) = (`r round(avg_frequencies, digits = 3)`)$$
+$$\hat{\pi} = (\hat{\pi}_{T}, \hat{\pi}_{C}, \hat{\pi}_{A}, \hat{\pi}_{G}) = (`r round(avg_frequencies, digits = 3)`)$$
 
 ### Transition transversion rate ratio
 
-> Propose a simple way of estimating transition transversion rate ratio from the dataset and use this estimate for the parameterization of the model.
+> Propose a simple way of estimating transition transversion rate ratio from the data-set and use this estimate for the parameterization of the model.
 
 The frequencies of the 16 possible combinations of the sequence
 alignment are shown in Table \ref{tab:nucleotide-comparisons} (from mouse in rows to human in columns). We get the frequencies when the numbers (occurrences) are divided by the total length (`r alignment_length` nt).
@@ -233,7 +234,7 @@ and transversional differences ($V = `r round(V, digits = 3)`$) can be estimated
 by taking the sum of the corresponding fields from Table \ref{tab:nucleotide-comparisons}.  
 
 There are different definitions of the transition transversion rate ratio  [@doi:10.1093/acprof:oso/9780199602605.001.0001].  
-A simple way to estimate the transition transversion rate ratio ($\hat{\kappa}$) 
+A simple way to estimate the transition transversion rate ratio ($\kappa$) 
 is to divide the mean transitional differences by the mean transversional differences:
 
 $$\hat{\kappa} = \frac{S/4}{V/8} = `r formatC(kappa_hat, digits = 3, format = "f")`$$
@@ -362,7 +363,7 @@ $$
 \mu
 $$
 
-The factor $\mu$ rescales the matrix that the mean substitution rate is one. It can be calculated as follows: [@Huelsenbeck]
+The factor $\mu$ re-scales the matrix that the mean substitution rate is one. It can be calculated as follows: [@Huelsenbeck]
 
 ```{r mu}
 
@@ -401,7 +402,7 @@ $$
 We're given that the distance of the two sequences 
 from human and mouse is $v = 0.01$. This means that there are $0.01$ expected substitutions
 between the two sequences per position.  
-Since we're only given one distance, we assume an unrooted tree where the mouse sequence is ancestral to the human sequence.  
+Since we're only given one distance, we assume an unrooted tree where the mouse sequence ($i$) is ancestral to the human sequence ($j$).  
 
 \begin{center}
 \begin{tikzpicture}
@@ -428,6 +429,7 @@ $$Pr_{CA}(v, \kappa, \pi)=\pi_{C}*p_{CA}(v)=`r formatC(pi_C, digits=3, format="f
 $$Pr_{AA}(v, \kappa, \pi)=\pi_{A}*p_{AA}(v)=`r formatC(pi_A, digits=3, format="f")`*`r formatC(transition_matrix_0_01["A","A"], digits=3, format="f")`=`r formatC(pi_A*transition_matrix_0_01["A","A"], digits=3, format="f")`$$
 
 ```{r likelihood-10}
+
 Pr_1 <- pi_A*transition_matrix_0_01["A","A"]
 Pr_2 <- pi_T*transition_matrix_0_01["T","T"]
 Pr_3 <- pi_G*transition_matrix_0_01["G","G"]
@@ -441,10 +443,11 @@ Pr_10 <- pi_A*transition_matrix_0_01["A","A"]
 
 L <- Pr_1*Pr_2*Pr_3*Pr_4*Pr_5*Pr_6*Pr_7*Pr_8*Pr_9*Pr_10
 l <- log(Pr_1)+log(Pr_2)+log(Pr_3)+log(Pr_4)+log(Pr_5)+log(Pr_6)+log(Pr_7)+log(Pr_8)+log(Pr_9)+log(Pr_10)
+
 ```
 
 
-$$L = \prod_{site = 1}^{N} Pr_{site} = `r formatC(L, digits = 3, format = "e")`$$
+$$L = \prod_{site = 1}^{N} Pr_{site} = `r formatC(L, digits = 3, format = "E")`$$
 
 To avoid underflow (computer issue caused by very small numbers) log-likelihood 
 is often used:  
@@ -465,7 +468,7 @@ The function `log_likelihood` was written, which takes following arguments:
 - `v`: evolutionary distance (expected substitutions per site)  
 - `kappa`: transition transversion rate ratio  
 - `pi`: vector of steady-state distribution of nucleotides (T, C, A, G)  
-- `df`: dataframe with alignment (organism in columns, sites in rows)  
+- `df`: data frame with alignment (organism in columns, sites in rows)  
 
 and returns the log-likelihood (using the estimated parameter values) of the sequence alignment which in this case is:
 $$\ell = `r formatC(log_likelihood_total, digits = 3, format = "f")`$$
@@ -504,9 +507,10 @@ $$\ell = `r formatC(-ml_list$value, digits = 3, format = "f")`$$
 
 ## Implementing a simulation
 
-> Implement a simulation under your model for two sequences over an arbitrary distance $v$. Validate the program by simulation and show the results of you validation.
+> Implement a simulation under your model for two sequences over an arbitrary distance $v$. Validate the program by simulation and show the results of your validation.
 
 ```{r simulation}
+
 set.seed(202001)
 
 # Define the amount and length of alignments which should be simulated
@@ -534,15 +538,16 @@ simulations_seqs <-
   select(-site, -mouse_index) %>%
   nest(seqs = -alignment) %>%
   mutate(l = log_likelihood_vectorized_df(0.01, kappa_hat, avg_frequencies, seqs))
+
 ```
 
 To simulate two aligned sequences over a distance of $v = 0.01$ and the previously defined substitution rate matrix $\bm{Q}$ 
-it is assumed that the substitutions happen independantly across sites.  
+it is assumed that the substitutions happen independently across sites.  
 `r alignments` pairwise alignments of length `r length` nt were simulated.  
 
 To validate the model, we can compare the probabilities for each of the 16 site patterns with the
 observed frequencies from the simulated alignments (Table \ref{tab:simulation-table}).  
-The calculated values are very close to the observed frequencies which confirmes the model.
+The calculated probabilities are very close to the observed frequencies which verifies the model.
 
 ```{r simulation-table, warning=FALSE}
 
@@ -590,10 +595,7 @@ simulations_seqs %>%
 
 ## Discussion
 
-It's unclear if the applied model is a good choice for this example. The transition transversion bias of the given sequence alignment is not very strong. Furthermore more complex models usually require more data to infer the parameter and are more prone to overfitting.  
-One should be careful when comparing log-likelihoods under different models 
-with different numbers of free parameters. Log-likelihoods tend to be higher 
-using a model with more parameters.  
+It's unclear if the applied model is a good choice for this example. The transition transversion bias of the given sequence alignment is not very strong. Furthermore more complex models usually require more data to infer the parameter and are more prone to over fitting.  
 
 The evolutionary distance given ($v = 0.01$) is much lower compared to the estimated distances $\hat{v}$ (Appendix).  
 Changing the given distance results in a better likelihood as next section proves.
@@ -605,6 +607,7 @@ neg_log_likelihood_two_parameter <- function(x){
 }
 
 ml_two_parameter <- optim(c("v" = 0.01, "kappa" = kappa_hat), neg_log_likelihood_two_parameter)
+
 ```
 
 If we look for the optimum (maximum likelihood) of a combination of the two parameters $v$ and $\kappa$ we get following results: 
@@ -615,13 +618,20 @@ $$\hat{\kappa} = `r formatC(ml_two_parameter$par[["kappa"]], digits = 3, format 
 with a log-likelihood of $\ell = `r formatC(-ml_two_parameter$value, digits = 3, format = "f")`$ 
 which is higher than the previously calculated maximum likelihood.
 
+
+\newpage
+
+
 ## Appendix
 
 As mentioned, there exist many different established Markov models of nucleotide substitution. 
 Table \ref{tab:different-estimates} lists estimates using the given alignment under different models 
 (JC69 [@jukes1969evolution], K80 [@Kimura1980], F81 [@Felsenstein1981], HKY85 [@Hasegawa1985]).
 The results were computed using either formulae 
-where possible [@doi:10.1093/acprof:oso/9780199602605.001.0001; @McGuire] or maximum likelihood [@doi:10.1093/acprof:oso/9780199602605.001.0001].
+where possible [@doi:10.1093/acprof:oso/9780199602605.001.0001; @McGuire] or maximum likelihood [@doi:10.1093/acprof:oso/9780199602605.001.0001].  
+One should be careful when comparing log-likelihoods under different models 
+with different numbers of free parameters. Log-likelihoods tend to be higher 
+using a model with more parameters. 
 
 \begin{table}[h]
 \centering
@@ -664,21 +674,19 @@ moral support.
 
 \begin{tabular}{cl}
 $\pi$ & steady-state distribution of nucleotides (frequencies) \\
+$\bm{P}$ & transition probability matrix \\
+$v$ & evolutionary distance (expected substitutions per site) \\
 $S$ & transitional differences (frequencies) \\
 $V$ & transversional differences (frequencies) \\
 $\kappa$ & transition transversion rate ratio \\
-$\alpha$ & transition rate \\
-$\beta$ & transversion rate \\
 $\bm{Q}$ & substitution rate matrix \\
 $q_{ij}$ & substitution rate from nucleotide i to j \\
 $q_{ii}$ & diagonal element of substitution rate matrix ($i = j$) \\
 $\mu$ & rescaling factor \\
-$\bm{P}$ & transition probability matrix \\
-$v$ & evolutionary distance (expected substitutions per site) \\
 $L$ & likelihood \\
 $\ell$ & log-likelihood ($\log_e$) \\
 $Pr_{ij}$ & probability of observing nucleotide i and j \\
-$p_{ij}$ & probability of substition of nucleotide i to j \\
+$p_{ij}$ & probability of substitution of nucleotide i to j \\
 \end{tabular}
 
 
